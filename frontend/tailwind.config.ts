@@ -1,9 +1,12 @@
 import type { Config } from "tailwindcss";
 
-export default {
+const config: Config = {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
-  prefix: "",
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+  ],
   theme: {
     container: {
       center: true,
@@ -20,73 +23,56 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-          dark: "hsl(var(--primary-dark))",
-          purple: "hsl(var(--primary-purple))",
-          teal: "hsl(var(--primary-teal))",
+          dark: "#001d47",
+          purple: "#551bfa",
+          teal: "#004563",
+          DEFAULT: "#551bfa",
+          foreground: "#ffffff",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-          yellow: "hsl(var(--secondary-yellow))",
-          dark: "hsl(var(--secondary-dark))",
-          cream: "hsl(var(--secondary-cream))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          yellow: "#faf01b",
+          dark: "#282828",
+          cream: "#fffde1",
+          DEFAULT: "#fffde1",
+          foreground: "#001d47",
         },
         success: {
-          DEFAULT: "hsl(var(--success))",
-          foreground: "hsl(0 0% 100%)",
+          DEFAULT: "#10b981",
+          foreground: "#ffffff",
+        },
+        error: {
+          DEFAULT: "#ef4444",
+          foreground: "#ffffff",
         },
         warning: {
-          DEFAULT: "hsl(var(--warning))",
-          foreground: "hsl(0 0% 100%)",
-        },
-        info: {
-          DEFAULT: "hsl(var(--info))",
-          foreground: "hsl(0 0% 100%)",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "#f59e0b",
+          foreground: "#ffffff",
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "12px",
+        md: "8px",
+        sm: "6px",
+      },
+      fontFamily: {
+        "all-round": ["var(--font-all-round)", "sans-serif"],
+        onest: ["var(--font-onest)", "sans-serif"],
+      },
+      spacing: {
+        "18": "4.5rem",
+        "88": "22rem",
+      },
+      transitionDuration: {
+        "200": "200ms",
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
       },
       animation: {
@@ -96,4 +82,6 @@ export default {
     },
   },
   plugins: [require("tailwindcss-animate")],
-} satisfies Config;
+};
+
+export default config;
