@@ -4,20 +4,75 @@ import './globals.css'
 import { Toaster } from 'sonner'
 import { Providers } from './providers'
 
-// Carregar fontes locais
+// Configuração da Fonte Secundária (Corpo/Texto) - Onest
+// Mapeando todos os arquivos específicos que você baixou para seus respectivos pesos css
 const onest = localFont({
-  src: './fonts/Onest.woff2',
+  src: [
+    {
+      path: './fonts/Onest-Thin.woff2',
+      weight: '100',
+      style: 'normal',
+    },
+    {
+      path: './fonts/Onest-ExtraLight.woff2',
+      weight: '200',
+      style: 'normal',
+    },
+    {
+      path: './fonts/Onest-Light.woff2',
+      weight: '300',
+      style: 'normal',
+    },
+    {
+      path: './fonts/Onest-Regular.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: './fonts/Onest-Medium.woff2',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: './fonts/Onest-SemiBold.woff2',
+      weight: '600',
+      style: 'normal',
+    },
+    {
+      path: './fonts/Onest-Bold.woff2',
+      weight: '700',
+      style: 'normal',
+    },
+    {
+      path: './fonts/Onest-ExtraBold.woff2',
+      weight: '800',
+      style: 'normal',
+    },
+    {
+      path: './fonts/Onest-Black.woff2',
+      weight: '900',
+      style: 'normal',
+    },
+  ],
   variable: '--font-onest-var',
   display: 'swap',
 })
 
+// Configuração da Fonte Primária (Títulos) - All Round Gothic
+// Como temos apenas o arquivo Medium, definimos ele como a fonte padrão para esta família
 const allRoundGothic = localFont({
-  src: './fonts/AllRoundGothic.woff2',
+  src: [
+    {
+      path: './fonts/AllRoundGothic-Medium.woff2',
+      weight: '500', // Peso nativo da fonte (Medium)
+      style: 'normal',
+    },
+  ],
   variable: '--font-all-round-gothic',
   display: 'swap',
 })
 
-// Configurar Viewport (antes era no metadata)
+// Configurar Viewport
 export const viewport: Viewport = {
   themeColor: '#001d47',
   width: 'device-width',
