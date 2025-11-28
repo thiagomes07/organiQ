@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PasswordInput } from '@/components/ui/password-input'
 
 export function LoginForm() {
   const { login, isLoggingIn } = useAuth()
@@ -44,9 +45,8 @@ export function LoginForm() {
         <Label htmlFor="login-password" required>
           Senha
         </Label>
-        <Input
+        <PasswordInput
           id="login-password"
-          type="password"
           placeholder="••••••••"
           error={errors.password?.message}
           {...register('password')}

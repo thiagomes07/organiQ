@@ -1,77 +1,94 @@
 @import "tailwindcss";
 
 @theme {
-  /* Cores Primárias */
   --color-primary-dark: #001d47;
   --color-primary-purple: #551bfa;
   --color-primary-teal: #004563;
-  
-  /* Cores Secundárias */
   --color-secondary-yellow: #faf01b;
   --color-secondary-dark: #282828;
   --color-secondary-cream: #fffde1;
-  
-  /* Sistema */
   --color-success: #10b981;
   --color-error: #ef4444;
   --color-warning: #f59e0b;
-  
-  /* Backgrounds */
-  --color-background: var(--color-secondary-cream);
-  --color-foreground: var(--color-primary-dark);
-  
-  /* Borders */
-  --color-border: oklch(0.8 0.02 210);
-  --color-input: oklch(0.8 0.02 210);
-  --color-ring: var(--color-primary-purple);
-  
-  /* Fontes */
-  --font-all-round: var(--font-all-round-gothic), ui-sans-serif, system-ui, sans-serif;
+  --color-background: #fffde1;
+  --color-foreground: #001d47;
+  --color-border: #d4d4d8;
+  --color-input: #d4d4d8;
+  --color-ring: #551bfa;
+  --font-all-round: var(--font-all-round-gothic), ui-sans-serif, system-ui,
+    sans-serif;
   --font-onest: var(--font-onest-var), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-onest);
-  
-  /* Border Radius */
+  --font-sans: var(--font-onest-var), ui-sans-serif, system-ui, sans-serif;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
-  
-  /* Spacing customizado */
   --spacing-18: 4.5rem;
   --spacing-88: 22rem;
-  
-  /* Animações */
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
-}
 
-@keyframes accordion-down {
-  from { height: 0; }
-  to { height: var(--radix-accordion-content-height); }
-}
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
 
-@keyframes accordion-up {
-  from { height: var(--radix-accordion-content-height); }
-  to { height: 0; }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     /* Modo escuro desabilitado por enquanto */
-    /* --color-background: var(--color-secondary-dark); */
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: var(--color-border);
   }
-  
+
   body {
-    @apply bg-background text-foreground font-sans;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
   }
-  
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-all-round;
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-all-round);
+  }
+
+  /* Cursor pointer para elementos interativos */
+  button:not(:disabled),
+  a:not([aria-disabled="true"]),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"],
+  [role="menuitem"],
+  label[for],
+  select:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  a[aria-disabled="true"],
+  [role="button"][aria-disabled="true"],
+  select:disabled {
+    cursor: not-allowed;
   }
 }
 

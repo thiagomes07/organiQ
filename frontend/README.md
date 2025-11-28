@@ -1,15 +1,121 @@
 # organiQ - Especificação Frontend Completa
 
+# O que é o organiQ? 🌱
+
+## Visão Geral
+O **organiQ** é uma plataforma SaaS (Software as a Service) que automatiza a criação e publicação de conteúdo para blogs usando Inteligência Artificial. O nome vem de "orgânico" + "IQ" (inteligência), refletindo o propósito: aumentar o tráfego orgânico (SEO) de forma inteligente.
+
+---
+
+## O Problema que Resolve
+
+Empresas e profissionais precisam publicar conteúdo constantemente em seus blogs para:
+- Melhorar posicionamento no Google (SEO)
+- Gerar autoridade no mercado
+- Atrair leads qualificados
+- Aumentar vendas
+
+**MAS:**
+- Criar conteúdo de qualidade é demorado
+- Contratar redatores é caro
+- Manter consistência é difícil
+- Otimizar para SEO exige conhecimento técnico
+
+---
+
+## A Solução
+
+O organiQ é um **"robô escritor de blog"** que:
+
+### 1. **Aprende sobre o negócio do cliente**
+- Descrição da empresa
+- Objetivos (gerar leads, vender, branding)
+- Localização (pode ter múltiplas unidades)
+- Site e blog existente
+- Identidade de marca (upload de manual de marca)
+
+### 2. **Analisa a concorrência**
+- Busca URLs de concorrentes
+- Identifica tópicos que eles abordam
+- Encontra gaps (assuntos que ninguém está explorando)
+
+### 3. **Gera ideias de matérias**
+Usando IA, cria sugestões de títulos e resumos baseados em:
+- Análise da concorrência
+- Dados do Google Search Console (palavras-chave que já trazem tráfego)
+- Objetivos do negócio
+- Localização (para SEO local, se aplicável)
+
+### 4. **Permite aprovação humana**
+O cliente revisa as ideias e pode:
+- Aprovar ou rejeitar cada matéria
+- Adicionar **feedbacks** (direcionamentos) como:
+  - "Focar em pequenas empresas"
+  - "Mencionar nosso produto X"
+  - "Tom mais técnico"
+
+### 5. **Escreve e publica automaticamente**
+- IA escreve o artigo completo considerando os feedbacks
+- Otimiza para SEO (palavras-chave, meta descriptions, estrutura)
+- **Publica diretamente no WordPress** do cliente
+- Integra com Google Analytics para rastreamento
+
+---
+
+## Fluxo do Usuário
+
+### 🆕 **Primeiro Acesso (Onboarding)**
+```
+1. Cadastro → 2. Escolher Plano → 3. Pagar →
+4. Preencher sobre o negócio (com localização) →
+5. Adicionar concorrentes →
+6. Conectar WordPress + Google →
+7. IA gera ideias →
+8. Aprovar matérias (com feedbacks opcionais) →
+9. IA escreve e publica →
+10. ✅ Dashboard com matérias publicadas
+```
+
+### 🔄 **Uso Recorrente**
+```
+1. "Gerar Novas Matérias" →
+2. Escolher quantidade (respeitando limite do plano) →
+3. Revisar/editar concorrentes (opcional) →
+4. IA gera novas ideias →
+5. Aprovar com feedbacks →
+6. Publicar
+```
+
+---
+
+## Casos de Uso
+
+### ✅ Ideal Para:
+- Clínicas (médicas, dentárias, estéticas)
+- Escritórios (advocacia, contabilidade)
+- E-commerces
+- Agências de marketing
+- Consultores e freelancers
+- Empresas locais com múltiplas filiais
+
+### ❌ Não Ideal Para:
+- Blogs pessoais/hobbies (muito nicho)
+- Conteúdo que exige fontes primárias (pesquisas científicas)
+- Notícias em tempo real
+
 ## Stack Técnica
 
 ### Framework e Bibliotecas
-- **Next.js 14+** (App Router)
-- **TypeScript**
-- **TailwindCSS** + **shadcn/ui** (customizado)
-- **React Hook Form** + **Zod**
-- **TanStack Query** (React Query)
-- **Zustand** (estado global de auth)
-- **Axios** (com interceptors)
+- **Next.js 16.0.4** (App Router)
+- **TypeScript 5**
+- **TailwindCSS 4** + **shadcn/ui** (customizado)
+- **React Hook Form 7.66** + **Zod 4.1**
+- **TanStack Query 5.90** (React Query)
+- **Zustand 5.0** (estado global de auth)
+- **Axios 1.13** (com interceptors)
+- **Sonner 2.0** (toast notifications)
+- **date-fns 4.1** (manipulação de datas)
+- **Lucide React 0.554** (ícones)
 
 ### Autenticação
 - **Cookies httpOnly, secure, sameSite: strict**
@@ -95,11 +201,29 @@ interface RegisterData {
   password: string;
 }
 
+// Business Location (Novo)
+interface BusinessLocation {
+  country: string;              // Obrigatório
+  state?: string;               // Opcional
+  city?: string;                // Opcional
+  hasMultipleUnits: boolean;    // Se tem mais de uma unidade
+  units?: BusinessUnit[];       // Array de unidades (se hasMultipleUnits)
+}
+
+interface BusinessUnit {
+  id: string;                   // UUID gerado no frontend
+  name?: string;                // Nome da unidade (opcional, ex: "Filial Centro")
+  country: string;              // Obrigatório
+  state?: string;               // Opcional
+  city?: string;                // Opcional
+}
+
 // Wizard/Business
 interface BusinessInfo {
   description: string;
   primaryObjective: 'leads' | 'sales' | 'branding';
   secondaryObjective?: 'leads' | 'sales' | 'branding';
+  location: BusinessLocation;   // Novo campo obrigatório
   siteUrl?: string;
   hasBlog: boolean;
   blogUrls: string[];
@@ -314,6 +438,7 @@ interface BusinessForm {
   description: string;              // Textarea, max 500 chars
   primaryObjective: string;         // Select: 'leads' | 'sales' | 'branding'
   secondaryObjective?: string;      // Select: mesmas opções (exceto a primária)
+  location: BusinessLocation;       // Novo campo obrigatório
   siteUrl?: string;                // Input, validação URL
   hasBlog: boolean;                // Checkbox
   blogUrls: string[];              // Array de inputs (se hasBlog)
@@ -337,13 +462,178 @@ interface BusinessForm {
   - Placeholder: "Selecione um objetivo secundário (opcional)"
   - Texto auxiliar: "Um objetivo secundário ajuda a criar conteúdo mais diversificado"
 
-**Validações Zod:**
-- description: min 10, max 500 chars
-- primaryObjective: required, enum
-- secondaryObjective: optional, enum, different from primaryObjective
-- siteUrl: URL válida ou undefined
-- blogUrls: array de URLs válidas
-- articleCount: between 1 and user.maxArticles
+**Campo "Localização do Negócio" (NOVO):**
+
+Este campo é **obrigatório** e possui múltiplas configurações possíveis:
+
+**Layout Visual:**
+- Card com borda `primary-teal` opacity-20
+- Ícone de localização ao lado do título
+- Background subtle `secondary-cream` opacity-30
+
+**Campos Base:**
+```typescript
+interface LocationFields {
+  country: string;              // Select obrigatório
+  state?: string;               // Select opcional (aparece após country)
+  city?: string;                // Input text opcional (aparece após state)
+  hasMultipleUnits: boolean;    // Checkbox
+}
+```
+
+**Estrutura do Formulário:**
+
+1. **País (Obrigatório)**
+   - Select com lista de países
+   - Placeholder: "Selecione o país"
+   - Uso: biblioteca de países (ex: `react-select-country-list`)
+
+2. **Tem múltiplas unidades?**
+   - Checkbox: "Meu negócio tem mais de uma unidade"
+   - Texto auxiliar: "Marque se você deseja especificar localizações diferentes"
+
+**Fluxo Condicional:**
+
+**Caso 1: Unidade Única (hasMultipleUnits: false)**
+```
+└─ País (obrigatório)
+   └─ Estado (opcional, aparece após país)
+      └─ Cidade (opcional, aparece após estado)
+```
+
+- O usuário pode parar em qualquer nível
+- Exemplo válido 1: Apenas "Brasil"
+- Exemplo válido 2: "Brasil" + "São Paulo"
+- Exemplo válido 3: "Brasil" + "São Paulo" + "São Paulo"
+
+**Caso 2: Múltiplas Unidades (hasMultipleUnits: true)**
+```
+└─ Botão "+ Adicionar Unidade"
+   └─ Para cada unidade:
+      ├─ Nome da unidade (opcional, ex: "Filial Centro")
+      ├─ País (obrigatório)
+      ├─ Estado (opcional)
+      ├─ Cidade (opcional)
+      └─ Botão "Remover Unidade"
+```
+
+- Mínimo: 1 unidade
+- Máximo: 10 unidades
+- Cada unidade é um card separado
+- Cards com animação slide-in
+- Botão "Remover" com confirmação
+
+**Design dos Cards de Unidade:**
+- Border left 3px `primary-purple`
+- Numeração automática (Unidade 1, Unidade 2...)
+- Input para nome opcional no topo
+- Mesma hierarquia país → estado → cidade
+- Ícone de arrastar (drag handle) para reordenar
+
+**Validações Especiais:**
+- Se `hasMultipleUnits: true`, pelo menos 1 unidade deve ter país preenchido
+- Estado só aparece após país selecionado
+- Cidade só aparece após estado preenchido
+- Se usuário começar a preencher estado, país fica obrigatório (lógica de dependência)
+
+**UX/UI Details:**
+- Transições suaves entre estados
+- Loading skeleton ao carregar lista de países/estados
+- Autocomplete em campos de cidade
+- Validação em tempo real
+- Badge mostrando "X unidades cadastradas" quando múltiplas
+- Empty state: "Nenhuma unidade adicionada ainda" com CTA
+
+**Exemplo de Payload Final:**
+```json
+{
+  "location": {
+    "country": "Brasil",
+    "hasMultipleUnits": false,
+    "state": "São Paulo",
+    "city": "São Paulo"
+  }
+}
+
+// OU
+
+{
+  "location": {
+    "country": "Brasil",
+    "hasMultipleUnits": true,
+    "units": [
+      {
+        "id": "uuid-1",
+        "name": "Matriz São Paulo",
+        "country": "Brasil",
+        "state": "São Paulo",
+        "city": "São Paulo"
+      },
+      {
+        "id": "uuid-2",
+        "name": "Filial Rio",
+        "country": "Brasil",
+        "state": "Rio de Janeiro",
+        "city": "Rio de Janeiro"
+      },
+      {
+        "id": "uuid-3",
+        "country": "Portugal",
+        "state": "Lisboa"
+        // Cidade não preenchida (opcional)
+      }
+    ]
+  }
+}
+```
+
+**Validações Zod Atualizadas:**
+```typescript
+const businessUnitSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().optional(),
+  country: z.string().min(1, 'País é obrigatório'),
+  state: z.string().optional(),
+  city: z.string().optional()
+});
+
+const locationSchema = z.object({
+  country: z.string().min(1, 'País é obrigatório'),
+  state: z.string().optional(),
+  city: z.string().optional(),
+  hasMultipleUnits: z.boolean(),
+  units: z.array(businessUnitSchema).optional()
+}).refine(
+  (data) => {
+    if (data.hasMultipleUnits) {
+      return data.units && data.units.length > 0;
+    }
+    return true;
+  },
+  {
+    message: 'Adicione pelo menos uma unidade',
+    path: ['units']
+  }
+);
+
+export const businessSchema = z.object({
+  description: z.string().min(10).max(500),
+  primaryObjective: z.enum(['leads', 'sales', 'branding']),
+  secondaryObjective: z.enum(['leads', 'sales', 'branding']).optional(),
+  location: locationSchema,
+  siteUrl: z.string().url().optional().or(z.literal('')),
+  hasBlog: z.boolean(),
+  blogUrls: z.array(z.string().url()),
+  articleCount: z.number().min(1).max(50),
+  brandFile: z.instanceof(File).optional()
+}).refine(
+  (data) => data.secondaryObjective !== data.primaryObjective,
+  {
+    message: 'Objetivo secundário deve ser diferente do primário',
+    path: ['secondaryObjective']
+  }
+);
+```
 
 **Button:** "Próximo" (background `secondary-yellow`)
 
@@ -443,7 +733,7 @@ interface ArticleIdeaCard {
   title: string;
   summary: string;
   approved: boolean;
-  feedback?: string;  // Novo campo
+  feedback?: string;
 }
 ```
 
@@ -454,7 +744,7 @@ interface ArticleIdeaCard {
   - "Aprovar" (verde, outline) | "Rejeitar" (cinza)
   - Estado selecionado: background filled
 
-**Campo de Feedback (Novo):**
+**Campo de Feedback:**
 - Aparece sempre, independente do estado
 - Textarea expansível (min 2 linhas, max 4 linhas)
 - Placeholder: "Adicione sugestões ou direcionamentos para esta matéria (opcional)"
@@ -470,7 +760,7 @@ interface ArticleIdeaCard {
 - Salvo automaticamente (debounce 1s)
 - Persiste mesmo se mudar de aprovado para rejeitado
 - Enviado junto com os IDs aprovados no publish
-- Se preenchido em matéria rejeitada, mostra badge "Feedback enviado" (para caso queira usar depois)
+- Se preenchido em matéria rejeitada, mostra badge "Feedback enviado"
 
 **Visual do Card:**
 - Matéria aprovada + com feedback: borda esquerda verde + ícone de check + badge "Com direcionamento"
@@ -501,11 +791,6 @@ interface PublishPayload {
 **Texto:** "Escrevendo e publicando no WordPress..."
 
 **Backend:** POST `/api/wizard/publish`
-```typescript
-interface PublishPayload {
-  approvedIds: string[];
-}
-```
 
 **Após Conclusão:**
 - Atualizar `hasCompletedOnboarding: true`
@@ -577,7 +862,7 @@ interface NewArticlesForm {
 interface ErrorModal {
   title: string;
   errorMessage: string;
-  content: string; // Conteúdo gerado que falhou
+  content: string;
 }
 ```
 
@@ -703,7 +988,7 @@ interface PlanInfo {
 ## 9. Componentes Globais
 
 ### Toast System
-- Biblioteca: `sonner` ou `react-hot-toast`
+- Biblioteca: `sonner` 2.0
 - Posição: top-right
 - Auto-dismiss: 5s
 - Tipos: success, error, warning, info
@@ -849,121 +1134,144 @@ Response: Clear cookies
 
 ---
 
-## 12. Padrões de Código
+## 12. Estrutura de Arquivos (Implementada)
 
-### Estrutura de Pastas (Next.js App Router)
 ```
-/app
-  /(public)
-    /page.tsx              # Landing
-    /login/page.tsx        # Login
-  /(protected)
-    /app/layout.tsx        # Layout com sidebar
-    /app/planos/page.tsx
-    /app/onboarding/page.tsx
-    /app/novo/page.tsx
-    /app/materias/page.tsx
-    /app/conta/page.tsx
-  /api
-    /auth/route.ts
-/components
-  /ui                      # shadcn components
-  /forms
-  /layouts
-/lib
-  /axios.ts
-  /validations.ts          # Zod schemas
-  /utils.ts
-/hooks
-  /useAuth.ts
-  /useArticles.ts
-/store
-  /authStore.ts            # Zustand
-/types
-  /index.ts
+C:.
+│   .env.example
+│   .env.local
+│   .gitignore
+│   middleware.ts
+│   next-env.d.ts
+│   next.config.ts
+│   package.json
+│   postcss.config.mjs
+│   README.md
+│   tsconfig.json
+│
+├───app
+│   │   error.tsx
+│   │   favicon.ico
+│   │   globals.css
+│   │   layout.tsx
+│   │   not-found.tsx
+│   │   page.tsx              # Landing page
+│   │   providers.tsx          # React Query + Toast providers
+│   │   robots.ts
+│   │   sitemap.ts
+│   │
+│   ├───api
+│   │   └───health            # Health check endpoint
+│   │           route.ts
+│   │
+│   ├───app                    # Rotas protegidas
+│   │   │   layout.tsx         # Layout com sidebar
+│   │   │
+│   │   ├───conta
+│   │   │       page.tsx
+│   │   │
+│   │   ├───materias
+│   │   │       page.tsx
+│   │   │
+│   │   ├───novo
+│   │   │       page.tsx
+│   │   │
+│   │   ├───onboarding
+│   │   │       page.tsx
+│   │   │
+│   │   └───planos
+│   │           page.tsx
+│   │
+│   ├───fonts                  # Tipografia customizada
+│   │       AllRoundGothic-Medium.woff2
+│   │       Onest-*.woff2
+│   │
+│   └───login                  # Rota pública
+│           page.tsx
+│
+├───components
+│   ├───articles               # Componentes de matérias
+│   │       ArticleCard.tsx
+│   │       ArticleIdeaCard.tsx
+│   │       ArticleTable.tsx
+│   │
+│   ├───forms                  # Formulários reutilizáveis
+│   │       BusinessInfoForm.tsx
+│   │       CompetitorsForm.tsx
+│   │       IntegrationsForm.tsx
+│   │       LoginForm.tsx
+│   │       RegisterForm.tsx
+│   │
+│   ├───layouts                # Layout components
+│   │       Header.tsx
+│   │       MobileNav.tsx
+│   │       Sidebar.tsx
+│   │
+│   ├───plans                  # Componentes de planos
+│   │       PlanCard.tsx
+│   │
+│   ├───shared                 # Componentes compartilhados
+│   │       EmptyState.tsx
+│   │       ErrorBoundary.tsx
+│   │       LoadingSpinner.tsx
+│   │
+│   ├───ui                     # shadcn/ui components
+│   │       button.tsx
+│   │       card.tsx
+│   │       dialog.tsx
+│   │       input.tsx
+│   │       label.tsx
+│   │       progress.tsx
+│   │       select.tsx
+│   │       skeleton.tsx
+│   │       slider.tsx
+│   │       tabs.tsx
+│   │       textarea.tsx
+│   │       toast.tsx
+│   │
+│   └───wizards                # Componentes de wizard
+│           NewArticlesWizard.tsx
+│           OnboardingWizard.tsx
+│           StepIndicator.tsx
+│
+├───hooks                      # Custom hooks
+│       useArticles.ts
+│       useAuth.ts
+│       usePlans.ts
+│       useWizard.ts
+│
+├───lib                        # Utilitários
+│       axios.ts               # Configuração Axios
+│       constantes.ts          # Constantes globais
+│       utils.ts               # Funções auxiliares
+│       validations.ts         # Schemas Zod
+│
+├───public
+│   │   manifest.json
+│   │
+│   ├───icons
+│   └───images
+│           logo.svg
+│           og-image.jpg
+│           twitter-image.jpg
+│
+├───store                      # Estado global (Zustand)
+│       authStore.ts
+│
+└───types                      # TypeScript types
+        index.ts
 ```
-
-### Validações Zod (lib/validations.ts)
-```typescript
-import { z } from 'zod';
-
-export const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres')
-});
-
-export const businessSchema = z.object({
-  description: z.string().min(10).max(500),
-  objective: z.enum(['leads', 'sales', 'branding']),
-  siteUrl: z.string().url().optional().or(z.literal('')),
-  hasBlog: z.boolean(),
-  blogUrls: z.array(z.string().url()),
-  articleCount: z.number().min(1).max(50),
-  brandFile: z.instanceof(File).optional()
-});
-
-// ... outros schemas
-```
-
-### Custom Hooks
-
-**hooks/useAuth.ts:**
-```typescript
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
-import api from '@/lib/axios';
-
-export function useAuth() {
-  const router = useRouter();
-  const { user, setUser, clearUser } = useAuthStore();
-  
-  const login = async (credentials: LoginCredentials) => {
-    const { data } = await api.post('/auth/login', credentials);
-    setUser(data.user);
-    
-    if (!data.user.hasCompletedOnboarding) {
-      router.push('/app/planos');
-    } else {
-      router.push('/app/materias');
-    }
-  };
-  
-  const logout = async () => {
-    await api.post('/auth/logout');
-    clearUser();
-    router.push('/login');
-  };
-  
-  return { user, login, logout };
-}
-```
-
----
-
-## 13. Testes e Qualidade
-
-### Checklist de Implementação
-- [ ] Validação Zod em todos os forms
-- [ ] Loading states em todos os botões/forms
-- [ ] Error handling com fallback UI
-- [ ] Toast notifications consistentes
-- [ ] Skeleton loaders
-- [ ] Empty states
-- [ ] Responsive em todos os breakpoints
-- [ ] Keyboard navigation
-- [ ] ARIA labels
-- [ ] Focus states visíveis
-- [ ] Rate limiting no frontend (debounce em buscas)
 
 ### Performance
 - Next.js Image para todas as imagens
 - Lazy loading de componentes pesados
 - TanStack Query cache (staleTime, cacheTime)
 - Debounce em inputs de busca/filtro
+- Otimização de re-renders (React.memo quando necessário)
 
 ---
 
-## 14. Endpoints Esperados (Resumo)
+## 16. Endpoints Esperados (Resumo)
 
 ```typescript
 // Auth
@@ -979,12 +1287,12 @@ GET    /api/payments/status/:id
 POST   /api/payments/create-portal-session
 
 // Wizard (Onboarding)
-POST   /api/wizard/business
+POST   /api/wizard/business           // Inclui campo location
 POST   /api/wizard/competitors
 POST   /api/wizard/integrations
 POST   /api/wizard/generate-ideas
 GET    /api/wizard/ideas-status/:id
-POST   /api/wizard/publish
+POST   /api/wizard/publish            // Inclui feedbacks
 
 // Wizard (Novo)
 POST   /api/articles/generate-ideas
@@ -1003,7 +1311,7 @@ GET    /api/account/plan
 
 ---
 
-## Arquitetura de Renderização e Build
+## 17. Arquitetura de Renderização e Build
 
 ### Decisão: Renderização Híbrida (SSR + SSG)
 
@@ -1023,23 +1331,20 @@ O Next.js gerencia automaticamente o método de renderização por rota:
   * **Rotas Públicas (Landing Page `/`):** Renderizadas como **Static Site Generation (SSG)**. O HTML é gerado no build, garantindo performance máxima (Time to First Byte) e **SEO otimizado** para indexação no Google.
   * **Rotas Protegidas (`/app/*`) e API:** Renderizadas via **Dynamic Rendering (SSR)**. Isso permite que o servidor (Node.js) verifique os cookies de sessão e execute o Middleware a cada requisição, garantindo que dados sensíveis só sejam enviados para usuários autenticados.
 
-### Configuração de Build (`next.config.ts`)
+### Configuração de Build
 
 Para suportar deploy em container (AWS App Runner/Docker) mantendo otimização de tamanho:
 
 ```typescript
 const nextConfig: NextConfig = {
-  // REMOVIDO: output: 'export' (Incompatível com Middleware/Auth)
-  
-  // ADICIONADO: Otimiza o build para containers Docker (~150MB vs ~1GB)
+  // Otimiza o build para containers Docker (~150MB vs ~1GB)
   output: 'standalone', 
   
-  // Mantém otimização de imagens (não suportada em 'export' puro sem loader externo)
+  // Mantém otimização de imagens
   images: { 
     unoptimized: false,
     remotePatterns: [...] 
-  },
-  // ...
+  }
 }
 ```
 
@@ -1058,10 +1363,9 @@ const nextConfig: NextConfig = {
 
 </div>
 
-
 ---
 
-## 15. Melhorias Futuras (v2)
+## 18. Melhorias Futuras (v2)
 
 - [ ] Edição de matérias antes de publicar
 - [ ] Agendamento de publicações
@@ -1073,3 +1377,7 @@ const nextConfig: NextConfig = {
 - [ ] Sugestões de otimização SEO em tempo real
 - [ ] Análise de concorrentes com dados do Search Console
 - [ ] Relatórios mensais de performance automatizados
+- [ ] Exportação de relatórios em PDF
+- [ ] Sistema de notificações em tempo real
+- [ ] Integração com mais CMS (Webflow, Wix, etc)
+- [ ] A/B testing de títulos e meta descriptions
