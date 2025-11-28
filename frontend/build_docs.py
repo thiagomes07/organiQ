@@ -19,7 +19,7 @@ def scan_repository(root_path, output_file="documentacao_codigo.md"):
         'node_modules', '.next', '.git', 'dist', 'build', 
         '.env.local', 'package-lock.json', '.gitignore', 'README.md',
         'package.json', 'tsconfig.json', 'postcss.config.mjs', 
-        'eslint.config.mjs', 'tailwind.config.ts'
+        'eslint.config.mjs', 'tailwind.config.ts', 'brazil-locations.ts'
     }
     
     files_with_content = []

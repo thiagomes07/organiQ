@@ -3,76 +3,97 @@
 // ============================================
 
 export interface User {
-  id: string
-  name: string
-  email: string
-  planId: string
-  planName: string
-  maxArticles: number
-  articlesUsed: number
-  hasCompletedOnboarding: boolean
-  createdAt: string
+  id: string;
+  name: string;
+  email: string;
+  planId: string;
+  planName: string;
+  maxArticles: number;
+  articlesUsed: number;
+  hasCompletedOnboarding: boolean;
+  createdAt: string;
 }
 
 export interface LoginCredentials {
-  email: string
-  password: string
+  email: string;
+  password: string;
 }
 
 export interface RegisterData {
-  name: string
-  email: string
-  password: string
+  name: string;
+  email: string;
+  password: string;
 }
 
 export interface AuthResponse {
-  user: User
-  message?: string
+  user: User;
+  message?: string;
+}
+
+// ============================================
+// LOCATION TYPES
+// ============================================
+
+export interface BusinessUnit {
+  id: string;
+  name?: string;
+  country: "Brasil"; // Fixo
+  state: string; // UF (AC, AL, AP, ...)
+  city: string; // Nome da cidade
+}
+
+export interface BusinessLocation {
+  country: "Brasil"; // Fixo
+  state: string; // UF obrigatório
+  city: string; // Cidade obrigatória
+  hasMultipleUnits: boolean;
+  units?: BusinessUnit[];
 }
 
 // ============================================
 // WIZARD / BUSINESS TYPES
 // ============================================
 
-export type ObjectiveType = 'leads' | 'sales' | 'branding'
+export type ObjectiveType = "leads" | "sales" | "branding";
 
 export interface BusinessInfo {
-  description: string
-  primaryObjective: ObjectiveType
-  secondaryObjective?: ObjectiveType
-  siteUrl?: string
-  hasBlog: boolean
-  blogUrls: string[]
-  articleCount: number
-  brandFile?: File
+  description: string;
+  primaryObjective: ObjectiveType;
+  secondaryObjective?: ObjectiveType;
+  location: BusinessLocation; // NOVO - Campo obrigatório
+  siteUrl?: string;
+  hasBlog: boolean;
+  blogUrls: string[];
+  articleCount: number;
+  brandFile?: File;
 }
 
 export interface CompetitorData {
-  competitorUrls: string[]
+  competitorUrls: string[];
 }
 
 export interface IntegrationsData {
   wordpress: {
-    siteUrl: string
-    username: string
-    appPassword: string
-  }
+    siteUrl: string;
+    username: string;
+    appPassword: string;
+  };
   searchConsole?: {
-    enabled: boolean
-    propertyUrl?: string
-  }
+    enabled: boolean;
+    propertyUrl?: string;
+  };
   analytics?: {
-    enabled: boolean
-    measurementId?: string
-  }
+    enabled: boolean;
+    measurementId?: string;
+  };
 }
 
 export interface WizardState {
-  currentStep: number
-  businessInfo?: BusinessInfo
-  competitorData?: CompetitorData
-  integrationsData?: IntegrationsData
-  articleIdeas?: ArticleIdea[]
+  currentStep: number;
+  businessInfo?: BusinessInfo;
+  competitorData?: CompetitorData;
+  integrationsData?: IntegrationsData;
+  articleIdeas?: ArticleIdea[];
 }
 
 // ============================================
@@ -80,43 +101,43 @@ export interface WizardState {
 // ============================================
 
 export interface ArticleIdea {
-  id: string
-  title: string
-  summary: string
-  approved: boolean
-  feedback?: string
+  id: string;
+  title: string;
+  summary: string;
+  approved: boolean;
+  feedback?: string;
 }
 
-export type ArticleStatus = 'generating' | 'publishing' | 'published' | 'error'
+export type ArticleStatus = "generating" | "publishing" | "published" | "error";
 
 export interface Article {
-  id: string
-  title: string
-  createdAt: string
-  status: ArticleStatus
-  postUrl?: string
-  errorMessage?: string
-  content?: string
+  id: string;
+  title: string;
+  createdAt: string;
+  status: ArticleStatus;
+  postUrl?: string;
+  errorMessage?: string;
+  content?: string;
 }
 
 export interface ArticlesResponse {
-  articles: Article[]
-  total: number
-  page: number
-  limit: number
+  articles: Article[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export interface ArticleFilters {
-  page?: number
-  limit?: number
-  status?: ArticleStatus | 'all'
+  page?: number;
+  limit?: number;
+  status?: ArticleStatus | "all";
 }
 
 export interface PublishPayload {
   articles: Array<{
-    id: string
-    feedback?: string
-  }>
+    id: string;
+    feedback?: string;
+  }>;
 }
 
 // ============================================
@@ -124,31 +145,31 @@ export interface PublishPayload {
 // ============================================
 
 export interface Plan {
-  id: string
-  name: string
-  maxArticles: number
-  price: number
-  features: string[]
-  recommended?: boolean
+  id: string;
+  name: string;
+  maxArticles: number;
+  price: number;
+  features: string[];
+  recommended?: boolean;
 }
 
 export interface PlanInfo {
-  name: string
-  maxArticles: number
-  articlesUsed: number
-  nextBillingDate: string
-  price: number
+  name: string;
+  maxArticles: number;
+  articlesUsed: number;
+  nextBillingDate: string;
+  price: number;
 }
 
 export interface CheckoutResponse {
-  checkoutUrl: string
-  sessionId: string
+  checkoutUrl: string;
+  sessionId: string;
 }
 
 export interface PaymentStatus {
-  id: string
-  status: 'pending' | 'paid' | 'failed'
-  planId: string
+  id: string;
+  status: "pending" | "paid" | "failed";
+  planId: string;
 }
 
 // ============================================
@@ -156,23 +177,23 @@ export interface PaymentStatus {
 // ============================================
 
 export interface ProfileUpdateData {
-  name: string
+  name: string;
 }
 
 export interface IntegrationsUpdateData {
   wordpress?: {
-    siteUrl: string
-    username: string
-    appPassword: string
-  }
+    siteUrl: string;
+    username: string;
+    appPassword: string;
+  };
   searchConsole?: {
-    enabled: boolean
-    propertyUrl?: string
-  }
+    enabled: boolean;
+    propertyUrl?: string;
+  };
   analytics?: {
-    enabled: boolean
-    measurementId?: string
-  }
+    enabled: boolean;
+    measurementId?: string;
+  };
 }
 
 // ============================================
@@ -180,15 +201,15 @@ export interface IntegrationsUpdateData {
 // ============================================
 
 export interface ApiError {
-  message: string
-  code?: string
-  field?: string
+  message: string;
+  code?: string;
+  field?: string;
 }
 
 export interface ApiResponse<T = unknown> {
-  data?: T
-  error?: ApiError
-  success: boolean
+  data?: T;
+  error?: ApiError;
+  success: boolean;
 }
 
 // ============================================
@@ -196,59 +217,60 @@ export interface ApiResponse<T = unknown> {
 // ============================================
 
 export interface LoginForm {
-  email: string
-  password: string
+  email: string;
+  password: string;
 }
 
 export interface RegisterForm {
-  name: string
-  email: string
-  password: string
+  name: string;
+  email: string;
+  password: string;
 }
 
 export interface BusinessForm {
-  description: string
-  primaryObjective: ObjectiveType
-  secondaryObjective?: ObjectiveType
-  siteUrl?: string
-  hasBlog: boolean
-  blogUrls: string[]
-  articleCount: number
-  brandFile?: File
+  description: string;
+  primaryObjective: ObjectiveType;
+  secondaryObjective?: ObjectiveType;
+  location: BusinessLocation; // NOVO - Campo obrigatório
+  siteUrl?: string;
+  hasBlog: boolean;
+  blogUrls: string[];
+  articleCount: number;
+  brandFile?: File;
 }
 
 export interface CompetitorsForm {
-  competitorUrls: string[]
+  competitorUrls: string[];
 }
 
 export interface IntegrationsForm {
   wordpress: {
-    siteUrl: string
-    username: string
-    appPassword: string
-  }
+    siteUrl: string;
+    username: string;
+    appPassword: string;
+  };
   searchConsole: {
-    enabled: boolean
-    propertyUrl?: string
-  }
+    enabled: boolean;
+    propertyUrl?: string;
+  };
   analytics: {
-    enabled: boolean
-    measurementId?: string
-  }
+    enabled: boolean;
+    measurementId?: string;
+  };
 }
 
 export interface NewArticlesForm {
-  articleCount: number
+  articleCount: number;
 }
 
 // ============================================
 // UTILITY TYPES
 // ============================================
 
-export type LoadingState = 'idle' | 'loading' | 'success' | 'error'
+export type LoadingState = "idle" | "loading" | "success" | "error";
 
 export interface PaginationState {
-  page: number
-  limit: number
-  total: number
+  page: number;
+  limit: number;
+  total: number;
 }

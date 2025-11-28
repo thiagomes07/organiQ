@@ -38,6 +38,68 @@ export const registerSchema = z
   });
 
 // ============================================
+// LOCATION SCHEMAS (ATUALIZADO PARA BRASIL)
+// ============================================
+
+export const businessUnitSchema = z.object({
+  id: z.string().uuid("ID inválido"),
+  name: z.string().optional(),
+  country: z.literal("Brasil", {
+    errorMap: () => ({ message: "Apenas Brasil é suportado no momento" })
+  }),
+  state: z.string().min(1, "Estado é obrigatório"),
+  city: z.string().min(1, "Cidade é obrigatória"),
+});
+
+export const locationSchema = z
+  .object({
+    country: z.literal("Brasil", {
+      errorMap: () => ({ message: "Apenas Brasil é suportado no momento" })
+    }).default("Brasil"),
+    state: z.string().min(1, "Estado é obrigatório"),
+    city: z.string().min(1, "Cidade é obrigatória"),
+    hasMultipleUnits: z.boolean(),
+    units: z.array(businessUnitSchema).optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.hasMultipleUnits) {
+        return data.units && data.units.length > 0;
+      }
+      return true;
+    },
+    {
+      message: "Adicione pelo menos uma unidade",
+      path: ["units"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.hasMultipleUnits && data.units) {
+        return data.units.length <= 10;
+      }
+      return true;
+    },
+    {
+      message: "Máximo de 10 unidades",
+      path: ["units"],
+    }
+  )
+  .refine(
+    (data) => {
+      // Se não tem múltiplas unidades, validar single location
+      if (!data.hasMultipleUnits) {
+        return data.state && data.city;
+      }
+      return true;
+    },
+    {
+      message: "Estado e cidade são obrigatórios",
+      path: ["state"],
+    }
+  );
+
+// ============================================
 // WIZARD SCHEMAS
 // ============================================
 
@@ -59,6 +121,8 @@ export const businessSchema = z
     primaryObjective: objectiveEnum,
 
     secondaryObjective: objectiveEnum.optional(),
+
+    location: locationSchema, // NOVO - Campo obrigatório
 
     siteUrl: z.string().url("URL inválida").optional().or(z.literal("")),
 
@@ -291,3 +355,5 @@ export type PublishPayloadInput = z.infer<typeof publishPayloadSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 export type IntegrationsUpdateInput = z.infer<typeof integrationsUpdateSchema>;
 export type ArticlesQueryInput = z.infer<typeof articlesQuerySchema>;
+export type BusinessUnitInput = z.infer<typeof businessUnitSchema>;
+export type LocationInput = z.infer<typeof locationSchema>;

@@ -1,28 +1,39 @@
-'use client'
+"use client";
 
-import { useForm, useFieldArray } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Plus, X, Upload } from 'lucide-react'
-import { businessSchema, type BusinessInput } from '@/lib/validations'
-import { OBJECTIVES } from '@/lib/constants'
-import { useUser } from '@/store/authStore'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Slider } from '@/components/ui/slider'
-import { useState } from 'react'
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus, X, Upload } from "lucide-react";
+import { businessSchema, type BusinessInput } from "@/lib/validations";
+import { OBJECTIVES } from "@/lib/constants";
+import { useUser } from "@/store/authStore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { LocationFields } from "./LocationFields";
+import { useState } from "react";
 
 interface BusinessInfoFormProps {
-  onSubmit: (data: BusinessInput) => void
-  isLoading?: boolean
-  defaultValues?: Partial<BusinessInput>
+  onSubmit: (data: BusinessInput) => void;
+  isLoading?: boolean;
+  defaultValues?: Partial<BusinessInput>;
 }
 
-export function BusinessInfoForm({ onSubmit, isLoading, defaultValues }: BusinessInfoFormProps) {
-  const user = useUser()
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+export function BusinessInfoForm({
+  onSubmit,
+  isLoading,
+  defaultValues,
+}: BusinessInfoFormProps) {
+  const user = useUser();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const {
     register,
@@ -34,34 +45,39 @@ export function BusinessInfoForm({ onSubmit, isLoading, defaultValues }: Busines
   } = useForm<BusinessInput>({
     resolver: zodResolver(businessSchema),
     defaultValues: {
-      description: '',
+      description: "",
       hasBlog: false,
       blogUrls: [],
       articleCount: 1,
+      location: {
+        country: "",
+        hasMultipleUnits: false,
+        units: [],
+      },
       ...defaultValues,
     },
-  })
+  });
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: 'blogUrls',
-  })
+    name: "blogUrls",
+  });
 
-  const watchPrimaryObjective = watch('primaryObjective')
-  const watchHasBlog = watch('hasBlog')
-  const watchArticleCount = watch('articleCount')
+  const watchPrimaryObjective = watch("primaryObjective");
+  const watchHasBlog = watch("hasBlog");
+  const watchArticleCount = watch("articleCount");
 
   const availableSecondaryObjectives = OBJECTIVES.filter(
     (obj) => obj.value !== watchPrimaryObjective
-  )
+  );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
-      setSelectedFile(file)
-      setValue('brandFile', file)
+      setSelectedFile(file);
+      setValue("brandFile", file);
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -76,7 +92,7 @@ export function BusinessInfoForm({ onSubmit, isLoading, defaultValues }: Busines
           maxLength={500}
           showCount
           error={errors.description?.message}
-          {...register('description')}
+          {...register("description")}
         />
         <p className="text-xs text-[var(--color-primary-dark)]/60 font-onest">
           Quanto mais detalhes, melhor será o conteúdo gerado
@@ -92,7 +108,9 @@ export function BusinessInfoForm({ onSubmit, isLoading, defaultValues }: Busines
           <Label htmlFor="primaryObjective">Objetivo Principal</Label>
           <Select
             value={watchPrimaryObjective}
-            onValueChange={(value) => setValue('primaryObjective', value as any)}
+            onValueChange={(value) =>
+              setValue("primaryObjective", value as any)
+            }
           >
             <SelectTrigger error={errors.primaryObjective?.message}>
               <SelectValue placeholder="Selecione seu objetivo principal" />
@@ -110,10 +128,14 @@ export function BusinessInfoForm({ onSubmit, isLoading, defaultValues }: Busines
         {/* Objetivo Secundário */}
         {watchPrimaryObjective && (
           <div className="space-y-2">
-            <Label htmlFor="secondaryObjective">Objetivo Secundário (opcional)</Label>
+            <Label htmlFor="secondaryObjective">
+              Objetivo Secundário (opcional)
+            </Label>
             <Select
-              value={watch('secondaryObjective') || ''}
-              onValueChange={(value) => setValue('secondaryObjective', value as any || undefined)}
+              value={watch("secondaryObjective") || ""}
+              onValueChange={(value) =>
+                setValue("secondaryObjective", (value as any) || undefined)
+              }
             >
               <SelectTrigger error={errors.secondaryObjective?.message}>
                 <SelectValue placeholder="Selecione um objetivo secundário (opcional)" />
@@ -133,6 +155,17 @@ export function BusinessInfoForm({ onSubmit, isLoading, defaultValues }: Busines
         )}
       </div>
 
+      {/* ========================================== */}
+      {/* LOCATION FIELDS - NOVO */}
+      {/* ========================================== */}
+      <LocationFields
+        control={control}
+        watch={watch}
+        setValue={setValue}
+        errors={errors}
+        register={register}
+      />
+
       {/* URL do Site */}
       <div className="space-y-2">
         <Label htmlFor="siteUrl">URL do seu site (opcional)</Label>
@@ -141,7 +174,7 @@ export function BusinessInfoForm({ onSubmit, isLoading, defaultValues }: Busines
           type="url"
           placeholder="https://seusite.com.br"
           error={errors.siteUrl?.message}
-          {...register('siteUrl')}
+          {...register("siteUrl")}
         />
       </div>
 
@@ -152,7 +185,7 @@ export function BusinessInfoForm({ onSubmit, isLoading, defaultValues }: Busines
             type="checkbox"
             id="hasBlog"
             className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary-purple)] focus:ring-[var(--color-primary-purple)]"
-            {...register('hasBlog')}
+            {...register("hasBlog")}
           />
           <Label htmlFor="hasBlog" className="cursor-pointer">
             Meu site já tem um blog
@@ -187,7 +220,7 @@ export function BusinessInfoForm({ onSubmit, isLoading, defaultValues }: Busines
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append('')}
+              onClick={() => append("")}
             >
               <Plus className="h-4 w-4 mr-2" />
               Adicionar URL
@@ -204,9 +237,11 @@ export function BusinessInfoForm({ onSubmit, isLoading, defaultValues }: Busines
           max={user?.maxArticles || 50}
           step={1}
           value={[watchArticleCount || 1]}
-          onValueChange={(value) => setValue('articleCount', value[0])}
+          onValueChange={(value) => setValue("articleCount", value[0])}
           showValue
-          formatValue={(value) => `${value} ${value === 1 ? 'matéria' : 'matérias'}`}
+          formatValue={(value) =>
+            `${value} ${value === 1 ? "matéria" : "matérias"}`
+          }
         />
         {errors.articleCount && (
           <p className="text-xs text-[var(--color-error)] font-onest">
@@ -225,7 +260,7 @@ export function BusinessInfoForm({ onSubmit, isLoading, defaultValues }: Busines
           >
             <Upload className="h-4 w-4" />
             <span className="text-sm font-onest">
-              {selectedFile ? selectedFile.name : 'Escolher arquivo'}
+              {selectedFile ? selectedFile.name : "Escolher arquivo"}
             </span>
           </label>
           <input
@@ -259,5 +294,5 @@ export function BusinessInfoForm({ onSubmit, isLoading, defaultValues }: Busines
         </Button>
       </div>
     </form>
-  )
+  );
 }
