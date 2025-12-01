@@ -129,6 +129,7 @@ export default nextConfig
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "baseline-browser-mapping": "^2.8.32",
     "eslint": "^9",
     "eslint-config-next": "16.0.4",
     "tailwindcss": "^4",
@@ -3121,7 +3122,9 @@ export function BusinessInfoForm({
       blogUrls: [],
       articleCount: 1,
       location: {
-        country: "",
+        country: "Brasil",
+        state: "",
+        city: "",
         hasMultipleUnits: false,
         units: [],
       },
@@ -3130,7 +3133,7 @@ export function BusinessInfoForm({
   });
 
   const { fields, append, remove } = useFieldArray({
-    control,
+    control: control as any,
     name: "blogUrls",
   });
 
@@ -3374,21 +3377,21 @@ export function BusinessInfoForm({
 ### components/forms/CompetitorsForm.tsx
 
 ```tsx
-'use client'
+"use client";
 
-import { useForm, useFieldArray } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Plus, X } from 'lucide-react'
-import { competitorsSchema, type CompetitorsInput } from '@/lib/validations'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus, X } from "lucide-react";
+import { competitorsSchema, type CompetitorsInput } from "@/lib/validations";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface CompetitorsFormProps {
-  onSubmit: (data: CompetitorsInput) => void
-  onBack: () => void
-  isLoading?: boolean
-  defaultValues?: Partial<CompetitorsInput>
+  onSubmit: (data: CompetitorsInput) => void;
+  onBack: () => void;
+  isLoading?: boolean;
+  defaultValues?: Partial<CompetitorsInput>;
 }
 
 export function CompetitorsForm({
@@ -3407,12 +3410,12 @@ export function CompetitorsForm({
     defaultValues: {
       competitorUrls: defaultValues?.competitorUrls || [],
     },
-  })
+  });
 
   const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'competitorUrls',
-  })
+    control: control as any,
+    name: "competitorUrls",
+  });
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -3422,7 +3425,8 @@ export function CompetitorsForm({
           Concorrentes (Opcional)
         </h3>
         <p className="text-sm font-onest text-[var(--color-primary-dark)]/70">
-          Adicione URLs de concorrentes para criar uma estratégia de SEO mais competitiva. Esta etapa é opcional, mas recomendada.
+          Adicione URLs de concorrentes para criar uma estratégia de SEO mais
+          competitiva. Esta etapa é opcional, mas recomendada.
         </p>
       </div>
 
@@ -3437,7 +3441,7 @@ export function CompetitorsForm({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append('')}
+              onClick={() => append("")}
             >
               <Plus className="h-4 w-4 mr-2" />
               Adicionar primeiro concorrente
@@ -3481,7 +3485,7 @@ export function CompetitorsForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => append('')}
+                onClick={() => append("")}
                 className="w-full"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -3501,7 +3505,9 @@ export function CompetitorsForm({
       {/* Info Box */}
       <div className="bg-[var(--color-primary-purple)]/5 border border-[var(--color-primary-purple)]/20 rounded-[var(--radius-md)] p-4">
         <p className="text-sm font-onest text-[var(--color-primary-dark)]/80">
-          💡 <strong>Dica:</strong> Adicione sites que produzem conteúdo similar ao seu. Nossa IA analisará suas estratégias de SEO para criar matérias ainda melhores.
+          💡 <strong>Dica:</strong> Adicione sites que produzem conteúdo similar
+          ao seu. Nossa IA analisará suas estratégias de SEO para criar matérias
+          ainda melhores.
         </p>
       </div>
 
@@ -3523,11 +3529,11 @@ export function CompetitorsForm({
           isLoading={isLoading}
           disabled={isLoading}
         >
-          {fields.length === 0 ? 'Pular esta etapa' : 'Próximo'}
+          {fields.length === 0 ? "Pular esta etapa" : "Próximo"}
         </Button>
       </div>
     </form>
-  )
+  );
 }
 ```
 
@@ -3855,7 +3861,7 @@ export function IntegrationsForm({
 ```tsx
 "use client";
 
-import { useFieldArray, Control } from "react-hook-form";
+import { useFieldArray, Control, UseFormSetValue, UseFormWatch, UseFormRegister, FieldErrors } from "react-hook-form";
 import { Plus, X, MapPin, GripVertical } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -3890,10 +3896,10 @@ import {
 
 interface LocationFieldsProps {
   control: Control<BusinessInput>;
-  watch: (name: string) => any;
-  setValue: (name: string, value: any) => void;
-  errors: any;
-  register: any;
+  watch: UseFormWatch<BusinessInput>;
+  setValue: UseFormSetValue<BusinessInput>;
+  errors: FieldErrors<BusinessInput>;
+  register: UseFormRegister<BusinessInput>;
 }
 
 export function LocationFields({
@@ -3911,7 +3917,7 @@ export function LocationFields({
   const statePreviousValue = useRef<string>("");
 
   const { fields, append, remove } = useFieldArray({
-    control,
+    control: control as any,
     name: "location.units",
   });
 
@@ -3941,8 +3947,8 @@ export function LocationFields({
   };
 
   const handleStateChange = (unitIndex: number, newState: string) => {
-    setValue(`location.units.${unitIndex}.state`, newState);
-    setValue(`location.units.${unitIndex}.city`, "");
+    setValue(`location.units.${unitIndex}.state` as any, newState);
+    setValue(`location.units.${unitIndex}.city` as any, "");
   };
 
   return (
@@ -4088,7 +4094,7 @@ export function LocationFields({
 
             {/* Units List */}
             {fields.map((field, index) => {
-              const unitState = watch(`location.units.${index}.state`);
+              const unitState = watch(`location.units.${index}.state` as any);
 
               return (
                 <div
@@ -4137,14 +4143,14 @@ export function LocationFields({
                     <Input
                       type="text"
                       placeholder="Ex: Filial Centro, Matriz..."
-                      {...register(`location.units.${index}.name`)}
+                      {...register(`location.units.${index}.name` as any)}
                     />
                   </div>
 
                   {/* País (fixo) */}
                   <input
                     type="hidden"
-                    {...register(`location.units.${index}.country`)}
+                    {...register(`location.units.${index}.country` as any)}
                     value="Brasil"
                   />
                   <div className="bg-gray-50 border border-gray-200 rounded-[var(--radius-sm)] p-2">
@@ -4184,9 +4190,9 @@ export function LocationFields({
                         Cidade
                       </Label>
                       <Select
-                        value={watch(`location.units.${index}.city`) || ""}
+                        value={watch(`location.units.${index}.city` as any) || ""}
                         onValueChange={(value) =>
-                          setValue(`location.units.${index}.city`, value)
+                          setValue(`location.units.${index}.city` as any, value)
                         }
                       >
                         <SelectTrigger
@@ -7215,9 +7221,9 @@ export function useArticles(filters: ArticleFilters = {}) {
     queryKey: articleKeys.list(filters),
     queryFn: () => articlesApi.getArticles(filters),
     staleTime: 30000, // 30 segundos
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Auto-refetch se houver artigos em geração/publicação
-      const hasActiveArticles = data?.articles.some(
+      const hasActiveArticles = query.state.data?.articles.some(
         (article) => article.status === 'generating' || article.status === 'publishing'
       )
       return hasActiveArticles ? 5000 : false // 5 segundos se ativo, senão não refetch
@@ -7638,9 +7644,9 @@ export function usePlans() {
       queryKey: planKeys.payment(sessionId || ''),
       queryFn: () => plansApi.getPaymentStatus(sessionId!),
       enabled: enabled && !!sessionId,
-      refetchInterval: (data) => {
+      refetchInterval: (query) => {
         // Parar polling se status for 'paid' ou 'failed'
-        if (data?.status === 'paid' || data?.status === 'failed') {
+        if (query.state.data?.status === 'paid' || query.state.data?.status === 'failed') {
           return false
         }
         return 3000 // Poll a cada 3 segundos
@@ -7725,19 +7731,19 @@ export function usePlans() {
 ### hooks/useWizard.ts
 
 ```ts
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import api, { getErrorMessage } from '@/lib/axios'
-import { useAuthStore } from '@/store/authStore'
-import type { 
-  BusinessInfo, 
-  CompetitorData, 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import api, { getErrorMessage } from "@/lib/axios";
+import { useAuthStore } from "@/store/authStore";
+import type {
+  BusinessInfo,
+  CompetitorData,
   IntegrationsData,
   ArticleIdea,
-  PublishPayload
-} from '@/types'
+  PublishPayload,
+} from "@/types";
 
 // ============================================
 // API FUNCTIONS
@@ -7746,89 +7752,108 @@ import type {
 const wizardApi = {
   // Onboarding completo
   submitBusiness: async (data: BusinessInfo): Promise<{ success: boolean }> => {
-    const formData = new FormData()
-    formData.append('description', data.description)
-    formData.append('primaryObjective', data.primaryObjective)
-    if (data.secondaryObjective) formData.append('secondaryObjective', data.secondaryObjective)
-    if (data.siteUrl) formData.append('siteUrl', data.siteUrl)
-    formData.append('hasBlog', String(data.hasBlog))
-    formData.append('blogUrls', JSON.stringify(data.blogUrls))
-    formData.append('articleCount', String(data.articleCount))
-    if (data.brandFile) formData.append('brandFile', data.brandFile)
+    const formData = new FormData();
+    formData.append("description", data.description);
+    formData.append("primaryObjective", data.primaryObjective);
+    if (data.secondaryObjective)
+      formData.append("secondaryObjective", data.secondaryObjective);
+    if (data.siteUrl) formData.append("siteUrl", data.siteUrl);
+    formData.append("hasBlog", String(data.hasBlog));
+    formData.append("blogUrls", JSON.stringify(data.blogUrls));
+    formData.append("articleCount", String(data.articleCount));
+    if (data.brandFile) formData.append("brandFile", data.brandFile);
 
-    const { data: response } = await api.post('/wizard/business', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-    return response
+    const { data: response } = await api.post("/wizard/business", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response;
   },
 
-  submitCompetitors: async (data: CompetitorData): Promise<{ success: boolean }> => {
-    const { data: response } = await api.post('/wizard/competitors', data)
-    return response
+  submitCompetitors: async (
+    data: CompetitorData
+  ): Promise<{ success: boolean }> => {
+    const { data: response } = await api.post("/wizard/competitors", data);
+    return response;
   },
 
-  submitIntegrations: async (data: IntegrationsData): Promise<{ success: boolean }> => {
-    const { data: response } = await api.post('/wizard/integrations', data)
-    return response
+  submitIntegrations: async (
+    data: IntegrationsData
+  ): Promise<{ success: boolean }> => {
+    const { data: response } = await api.post("/wizard/integrations", data);
+    return response;
   },
 
   generateIdeas: async (): Promise<{ jobId: string }> => {
-    const { data } = await api.post('/wizard/generate-ideas')
-    return data
+    const { data } = await api.post("/wizard/generate-ideas");
+    return data;
   },
 
-  getIdeasStatus: async (jobId: string): Promise<{ 
-    status: 'processing' | 'completed' | 'failed'
-    ideas?: ArticleIdea[]
-    error?: string 
+  getIdeasStatus: async (
+    jobId: string
+  ): Promise<{
+    status: "processing" | "completed" | "failed";
+    ideas?: ArticleIdea[];
+    error?: string;
   }> => {
-    const { data } = await api.get(`/wizard/ideas-status/${jobId}`)
-    return data
+    const { data } = await api.get(`/wizard/ideas-status/${jobId}`);
+    return data;
   },
 
-  publishArticles: async (payload: PublishPayload): Promise<{ jobId: string }> => {
-    const { data } = await api.post('/wizard/publish', payload)
-    return data
+  publishArticles: async (
+    payload: PublishPayload
+  ): Promise<{ jobId: string }> => {
+    const { data } = await api.post("/wizard/publish", payload);
+    return data;
   },
 
-  getPublishStatus: async (jobId: string): Promise<{
-    status: 'processing' | 'completed' | 'failed'
-    published?: number
-    total?: number
-    error?: string
+  getPublishStatus: async (
+    jobId: string
+  ): Promise<{
+    status: "processing" | "completed" | "failed";
+    published?: number;
+    total?: number;
+    error?: string;
   }> => {
-    const { data } = await api.get(`/wizard/publish-status/${jobId}`)
-    return data
+    const { data } = await api.get(`/wizard/publish-status/${jobId}`);
+    return data;
   },
 
   // Wizard simplificado (novo)
-  generateNewIdeas: async (data: { articleCount: number; competitorUrls?: string[] }): Promise<{ jobId: string }> => {
-    const { data: response } = await api.post('/articles/generate-ideas', data)
-    return response
+  generateNewIdeas: async (data: {
+    articleCount: number;
+    competitorUrls?: string[];
+  }): Promise<{ jobId: string }> => {
+    const { data: response } = await api.post("/articles/generate-ideas", data);
+    return response;
   },
 
-  publishNewArticles: async (payload: PublishPayload): Promise<{ jobId: string }> => {
-    const { data } = await api.post('/articles/publish', payload)
-    return data
-  }
-}
+  publishNewArticles: async (
+    payload: PublishPayload
+  ): Promise<{ jobId: string }> => {
+    const { data } = await api.post("/articles/publish", payload);
+    return data;
+  },
+};
 
 // ============================================
 // HOOK
 // ============================================
 
 export function useWizard(isOnboarding: boolean = true) {
-  const router = useRouter()
-  const queryClient = useQueryClient()
-  const { updateUser } = useAuthStore()
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { updateUser } = useAuthStore();
 
   // Local state para wizard steps
-  const [currentStep, setCurrentStep] = useState(1)
-  const [businessData, setBusinessData] = useState<BusinessInfo | null>(null)
-  const [competitorData, setCompetitorData] = useState<CompetitorData | null>(null)
-  const [integrationsData, setIntegrationsData] = useState<IntegrationsData | null>(null)
-  const [articleIdeas, setArticleIdeas] = useState<ArticleIdea[]>([])
-  const [jobId, setJobId] = useState<string | null>(null)
+  const [currentStep, setCurrentStep] = useState(1);
+  const [businessData, setBusinessData] = useState<BusinessInfo | null>(null);
+  const [competitorData, setCompetitorData] = useState<CompetitorData | null>(
+    null
+  );
+  const [integrationsData, setIntegrationsData] =
+    useState<IntegrationsData | null>(null);
+  const [articleIdeas, setArticleIdeas] = useState<ArticleIdea[]>([]);
+  const [jobId, setJobId] = useState<string | null>(null);
 
   // ============================================
   // STEP 1: BUSINESS INFO
@@ -7837,15 +7862,15 @@ export function useWizard(isOnboarding: boolean = true) {
   const businessMutation = useMutation({
     mutationFn: wizardApi.submitBusiness,
     onSuccess: (_, variables) => {
-      setBusinessData(variables)
-      setCurrentStep(2)
-      toast.success('Informações salvas!')
+      setBusinessData(variables);
+      setCurrentStep(2);
+      toast.success("Informações salvas!");
     },
     onError: (error) => {
-      const message = getErrorMessage(error)
-      toast.error(message || 'Erro ao salvar informações')
-    }
-  })
+      const message = getErrorMessage(error);
+      toast.error(message || "Erro ao salvar informações");
+    },
+  });
 
   // ============================================
   // STEP 2: COMPETITORS
@@ -7854,19 +7879,19 @@ export function useWizard(isOnboarding: boolean = true) {
   const competitorsMutation = useMutation({
     mutationFn: wizardApi.submitCompetitors,
     onSuccess: (_, variables) => {
-      setCompetitorData(variables)
-      setCurrentStep(isOnboarding ? 3 : 999) // Se não é onboarding, pula para loading
+      setCompetitorData(variables);
+      setCurrentStep(isOnboarding ? 3 : 999); // Se não é onboarding, pula para loading
       if (!isOnboarding) {
-        generateIdeasMutation.mutate()
+        generateIdeasMutation.mutate();
       } else {
-        toast.success('Concorrentes salvos!')
+        toast.success("Concorrentes salvos!");
       }
     },
     onError: (error) => {
-      const message = getErrorMessage(error)
-      toast.error(message || 'Erro ao salvar concorrentes')
-    }
-  })
+      const message = getErrorMessage(error);
+      toast.error(message || "Erro ao salvar concorrentes");
+    },
+  });
 
   // ============================================
   // STEP 3: INTEGRATIONS (só no onboarding)
@@ -7875,147 +7900,152 @@ export function useWizard(isOnboarding: boolean = true) {
   const integrationsMutation = useMutation({
     mutationFn: wizardApi.submitIntegrations,
     onSuccess: (_, variables) => {
-      setIntegrationsData(variables)
-      setCurrentStep(999) // Vai para loading
-      generateIdeasMutation.mutate()
+      setIntegrationsData(variables);
+      setCurrentStep(999); // Vai para loading
+      generateIdeasMutation.mutate();
     },
     onError: (error) => {
-      const message = getErrorMessage(error)
-      toast.error(message || 'Erro ao salvar integrações')
-    }
-  })
+      const message = getErrorMessage(error);
+      toast.error(message || "Erro ao salvar integrações");
+    },
+  });
 
   // ============================================
   // LOADING: GENERATE IDEAS
   // ============================================
 
   const generateIdeasMutation = useMutation({
-    mutationFn: isOnboarding 
-      ? wizardApi.generateIdeas 
-      : () => wizardApi.generateNewIdeas({
-          articleCount: businessData?.articleCount || 1,
-          competitorUrls: competitorData?.competitorUrls
-        }),
+    mutationFn: isOnboarding
+      ? wizardApi.generateIdeas
+      : () =>
+          wizardApi.generateNewIdeas({
+            articleCount: businessData?.articleCount || 1,
+            competitorUrls: competitorData?.competitorUrls,
+          }),
     onSuccess: (data) => {
-      setJobId(data.jobId)
+      setJobId(data.jobId);
       // O polling vai começar automaticamente via useQuery
     },
     onError: (error) => {
-      const message = getErrorMessage(error)
-      toast.error(message || 'Erro ao gerar ideias')
-      setCurrentStep(isOnboarding ? 3 : 2) // Volta para step anterior
-    }
-  })
+      const message = getErrorMessage(error);
+      toast.error(message || "Erro ao gerar ideias");
+      setCurrentStep(isOnboarding ? 3 : 2); // Volta para step anterior
+    },
+  });
 
   // ============================================
   // POLLING: IDEAS STATUS
   // ============================================
 
   const ideasStatusQuery = useQuery({
-    queryKey: ['ideas-status', jobId],
+    queryKey: ["ideas-status", jobId],
     queryFn: () => wizardApi.getIdeasStatus(jobId!),
     enabled: !!jobId && currentStep === 999,
-    refetchInterval: (data) => {
-      if (data?.status === 'completed') {
-        setArticleIdeas(data.ideas || [])
-        setCurrentStep(isOnboarding ? 4 : 3) // Vai para aprovação
-        return false
+    refetchInterval: (query) => {
+      if (query.state.data?.status === "completed") {
+        setArticleIdeas(query.state.data.ideas || []);
+        setCurrentStep(isOnboarding ? 4 : 3); // Vai para aprovação
+        return false;
       }
-      if (data?.status === 'failed') {
-        toast.error(data.error || 'Erro ao gerar ideias')
-        setCurrentStep(isOnboarding ? 3 : 2)
-        return false
+      if (query.state.data?.status === "failed") {
+        toast.error(query.state.data.error || "Erro ao gerar ideias");
+        setCurrentStep(isOnboarding ? 3 : 2);
+        return false;
       }
-      return 3000 // Poll a cada 3 segundos
+      return 3000; // Poll a cada 3 segundos
     },
-    refetchOnWindowFocus: false
-  })
+    refetchOnWindowFocus: false,
+  });
 
   // ============================================
   // STEP 4: PUBLISH
   // ============================================
 
   const publishMutation = useMutation({
-    mutationFn: isOnboarding ? wizardApi.publishArticles : wizardApi.publishNewArticles,
+    mutationFn: isOnboarding
+      ? wizardApi.publishArticles
+      : wizardApi.publishNewArticles,
     onSuccess: (data) => {
-      setJobId(data.jobId)
-      setCurrentStep(1000) // Loading de publicação
+      setJobId(data.jobId);
+      setCurrentStep(1000); // Loading de publicação
     },
     onError: (error) => {
-      const message = getErrorMessage(error)
-      toast.error(message || 'Erro ao publicar matérias')
-    }
-  })
+      const message = getErrorMessage(error);
+      toast.error(message || "Erro ao publicar matérias");
+    },
+  });
 
   // ============================================
   // POLLING: PUBLISH STATUS
   // ============================================
 
   const publishStatusQuery = useQuery({
-    queryKey: ['publish-status', jobId],
+    queryKey: ["publish-status", jobId],
     queryFn: () => wizardApi.getPublishStatus(jobId!),
     enabled: !!jobId && currentStep === 1000,
-    refetchInterval: (data) => {
-      if (data?.status === 'completed') {
+    refetchInterval: (query) => {
+      if (query.state.data?.status === "completed") {
         // Atualizar usuário
         if (isOnboarding) {
-          updateUser({ hasCompletedOnboarding: true })
+          updateUser({ hasCompletedOnboarding: true });
         }
-        
+
         // Invalidar cache de artigos
-        queryClient.invalidateQueries({ queryKey: ['articles'] })
-        
-        toast.success(`${data.published} matérias publicadas com sucesso!`)
-        router.push('/app/materias')
-        return false
+        queryClient.invalidateQueries({ queryKey: ["articles"] });
+
+        toast.success(
+          `${query.state.data.published} matérias publicadas com sucesso!`
+        );
+        router.push("/app/materias");
+        return false;
       }
-      if (data?.status === 'failed') {
-        toast.error(data.error || 'Erro ao publicar matérias')
-        setCurrentStep(isOnboarding ? 4 : 3)
-        return false
+      if (query.state.data?.status === "failed") {
+        toast.error(query.state.data.error || "Erro ao publicar matérias");
+        setCurrentStep(isOnboarding ? 4 : 3);
+        return false;
       }
-      return 3000
+      return 3000;
     },
-    refetchOnWindowFocus: false
-  })
+    refetchOnWindowFocus: false,
+  });
 
   // ============================================
   // NAVIGATION HELPERS
   // ============================================
 
   const goToStep = (step: number) => {
-    setCurrentStep(step)
-  }
+    setCurrentStep(step);
+  };
 
   const nextStep = () => {
-    setCurrentStep((prev) => prev + 1)
-  }
+    setCurrentStep((prev) => prev + 1);
+  };
 
   const previousStep = () => {
-    setCurrentStep((prev) => Math.max(1, prev - 1))
-  }
+    setCurrentStep((prev) => Math.max(1, prev - 1));
+  };
 
   const submitBusinessInfo = (data: BusinessInfo) => {
-    businessMutation.mutate(data)
-  }
+    businessMutation.mutate(data);
+  };
 
   const submitCompetitors = (data: CompetitorData) => {
-    competitorsMutation.mutate(data)
-  }
+    competitorsMutation.mutate(data);
+  };
 
   const submitIntegrations = (data: IntegrationsData) => {
-    integrationsMutation.mutate(data)
-  }
+    integrationsMutation.mutate(data);
+  };
 
   const publishArticles = (payload: PublishPayload) => {
-    publishMutation.mutate(payload)
-  }
+    publishMutation.mutate(payload);
+  };
 
   const updateArticleIdea = (id: string, updates: Partial<ArticleIdea>) => {
     setArticleIdeas((prev) =>
       prev.map((idea) => (idea.id === id ? { ...idea, ...updates } : idea))
-    )
-  }
+    );
+  };
 
   // ============================================
   // RETURN
@@ -8028,35 +8058,36 @@ export function useWizard(isOnboarding: boolean = true) {
     competitorData,
     integrationsData,
     articleIdeas,
-    
+
     // Navigation
     goToStep,
     nextStep,
     previousStep,
-    
+
     // Actions
     submitBusinessInfo,
     submitCompetitors,
     submitIntegrations,
     publishArticles,
     updateArticleIdea,
-    
+
     // Loading states
     isSubmittingBusiness: businessMutation.isPending,
     isSubmittingCompetitors: competitorsMutation.isPending,
     isSubmittingIntegrations: integrationsMutation.isPending,
-    isGeneratingIdeas: generateIdeasMutation.isPending || ideasStatusQuery.isFetching,
+    isGeneratingIdeas:
+      generateIdeasMutation.isPending || ideasStatusQuery.isFetching,
     isPublishing: publishMutation.isPending || publishStatusQuery.isFetching,
-    
+
     // Progress info
     ideasProgress: ideasStatusQuery.data?.status,
     publishProgress: publishStatusQuery.data,
-    
+
     // Computed
     approvedCount: articleIdeas.filter((idea) => idea.approved).length,
     canPublish: articleIdeas.some((idea) => idea.approved),
-    isLoading: currentStep === 999 || currentStep === 1000
-  }
+    isLoading: currentStep === 999 || currentStep === 1000,
+  };
 }
 ```
 
@@ -8069,6 +8100,16 @@ export function useWizard(isOnboarding: boolean = true) {
 ```ts
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { toast } from 'sonner'
+
+// ============================================
+// TYPES
+// ============================================
+
+interface ApiErrorResponse {
+  message?: string
+  error?: string
+  errors?: Record<string, string>
+}
 
 // ============================================
 // CONFIGURAÇÃO BASE
@@ -8131,7 +8172,7 @@ api.interceptors.response.use(
     // Resposta bem-sucedida
     return response
   },
-  async (error: AxiosError) => {
+  async (error: AxiosError<ApiErrorResponse>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean
     }
@@ -8232,10 +8273,11 @@ api.interceptors.response.use(
  */
 export const getErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError<ApiErrorResponse>
     return (
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      error.message ||
+      axiosError.response?.data?.message ||
+      axiosError.response?.data?.error ||
+      axiosError.message ||
       'Erro desconhecido'
     )
   }
@@ -8258,8 +8300,11 @@ export const isValidationError = (error: unknown): boolean => {
  * Extrai erros de campo do erro de validação
  */
 export const getFieldErrors = (error: unknown): Record<string, string> => {
-  if (axios.isAxiosError(error) && error.response?.status === 422) {
-    return error.response.data?.errors || {}
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError<ApiErrorResponse>
+    if (axiosError.response?.status === 422) {
+      return axiosError.response.data?.errors || {}
+    }
   }
   return {}
 }
@@ -8836,20 +8881,20 @@ export const registerSchema = z
   });
 
 // ============================================
-// LOCATION SCHEMAS (CORRIGIDO)
+// LOCATION SCHEMAS (CORRIGIDO - country agora é obrigatório)
 // ============================================
 
 export const businessUnitSchema = z.object({
   id: z.string().uuid("ID inválido"),
   name: z.string().optional(),
-  country: z.string().min(1, "País é obrigatório").default("Brasil"),
+  country: z.string().min(1, "País é obrigatório"),
   state: z.string().min(1, "Estado é obrigatório"),
   city: z.string().min(1, "Cidade é obrigatória"),
 });
 
 export const locationSchema = z
   .object({
-    country: z.string().min(1, "País é obrigatório").default("Brasil"),
+    country: z.string().min(1, "País é obrigatório"),
     state: z.string().min(1, "Estado é obrigatório"),
     city: z.string().min(1, "Cidade é obrigatória"),
     hasMultipleUnits: z.boolean(),
@@ -8898,7 +8943,7 @@ export const locationSchema = z
 // ============================================
 
 const objectiveEnum = z.enum(["leads", "sales", "branding"], {
-  errorMap: () => ({ message: "Selecione um objetivo válido" }),
+  message: "Selecione um objetivo válido",
 });
 
 export const businessSchema = z
@@ -8920,12 +8965,9 @@ export const businessSchema = z
 
     siteUrl: z.string().url("URL inválida").optional().or(z.literal("")),
 
-    hasBlog: z.boolean().default(false),
+    hasBlog: z.boolean(),
 
-    blogUrls: z.array(z.string().url("URL inválida")).refine((urls) => {
-      const domains = urls.map((url) => new URL(url).hostname);
-      return new Set(domains).size === domains.length;
-    }, "URLs devem ser de domínios diferentes"),
+    blogUrls: z.array(z.string().url("URL inválida")),
 
     articleCount: z
       .number()
@@ -8980,8 +9022,7 @@ export const businessSchema = z
 export const competitorsSchema = z.object({
   competitorUrls: z
     .array(z.string().url("URL inválida"))
-    .max(10, "Máximo de 10 concorrentes")
-    .default([]),
+    .max(10, "Máximo de 10 concorrentes"),
 });
 
 export const integrationsSchema = z
@@ -9003,14 +9044,14 @@ export const integrationsSchema = z
 
     searchConsole: z
       .object({
-        enabled: z.boolean().default(false),
+        enabled: z.boolean(),
         propertyUrl: z.string().url("URL inválida").optional(),
       })
       .optional(),
 
     analytics: z
       .object({
-        enabled: z.boolean().default(false),
+        enabled: z.boolean(),
         measurementId: z
           .string()
           .regex(
@@ -9145,7 +9186,7 @@ export type CompetitorsInput = z.infer<typeof competitorsSchema>;
 export type IntegrationsInput = z.infer<typeof integrationsSchema>;
 export type NewArticlesInput = z.infer<typeof newArticlesSchema>;
 export type ArticleIdeaInput = z.infer<typeof articleIdeaSchema>;
-export type PublishPayloadInput = z.infer<typeof publishPayloadSchema>;
+export type PublishPayload = z.infer<typeof publishPayloadSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 export type IntegrationsUpdateInput = z.infer<typeof integrationsUpdateSchema>;
 export type ArticlesQueryInput = z.infer<typeof articlesQuerySchema>;
@@ -9427,19 +9468,19 @@ export interface AuthResponse {
 }
 
 // ============================================
-// LOCATION TYPES (CORRIGIDO)
+// LOCATION TYPES
 // ============================================
 
 export interface BusinessUnit {
   id: string;
   name?: string;
-  country: string; // Alterado de "Brasil" literal para string
+  country: string;
   state: string;
   city: string;
 }
 
 export interface BusinessLocation {
-  country: string; // Alterado de "Brasil" literal para string
+  country: string;
   state: string;
   city: string;
   hasMultipleUnits: boolean;
@@ -9459,7 +9500,7 @@ export interface BusinessInfo {
   location: BusinessLocation;
   siteUrl?: string;
   hasBlog: boolean;
-  blogUrls: string[];
+  blogUrls: string[]; // REVERTIDO: deve ser obrigatório mas pode ser array vazio
   articleCount: number;
   brandFile?: File;
 }
@@ -9630,7 +9671,7 @@ export interface BusinessForm {
   location: BusinessLocation;
   siteUrl?: string;
   hasBlog: boolean;
-  blogUrls: string[];
+  blogUrls: string[]; // REVERTIDO: deve ser obrigatório mas pode ser array vazio
   articleCount: number;
   brandFile?: File;
 }
@@ -9698,10 +9739,10 @@ export interface PaginationState {
 - `components/articles/ArticleCard.tsx` (3894 caracteres)
 - `components/articles/ArticleIdeaCard.tsx` (4553 caracteres)
 - `components/articles/ArticleTable.tsx` (5853 caracteres)
-- `components/forms/BusinessInfoForm.tsx` (9308 caracteres)
-- `components/forms/CompetitorsForm.tsx` (5088 caracteres)
+- `components/forms/BusinessInfoForm.tsx` (9367 caracteres)
+- `components/forms/CompetitorsForm.tsx` (5149 caracteres)
 - `components/forms/IntegrationsForm.tsx` (12773 caracteres)
-- `components/forms/LocationFields.tsx` (14731 caracteres)
+- `components/forms/LocationFields.tsx` (14909 caracteres)
 - `components/forms/LoginForm.tsx` (2010 caracteres)
 - `components/forms/RegisterForm.tsx` (3158 caracteres)
 - `components/layouts/Header.tsx` (1769 caracteres)
@@ -9728,27 +9769,27 @@ export interface PaginationState {
 - `components/wizards/NewArticlesWizard.tsx` (11612 caracteres)
 - `components/wizards/OnboardingWizard.tsx` (3687 caracteres)
 - `components/wizards/StepIndicator.tsx` (4696 caracteres)
-- `hooks/useArticles.ts` (6191 caracteres)
+- `hooks/useArticles.ts` (6204 caracteres)
 - `hooks/useAuth.ts` (4064 caracteres)
-- `hooks/usePlans.ts` (5736 caracteres)
-- `hooks/useWizard.ts` (10565 caracteres)
-- `lib/axios.ts` (5760 caracteres)
+- `hooks/usePlans.ts` (5761 caracteres)
+- `hooks/useWizard.ts` (10878 caracteres)
+- `lib/axios.ts` (6149 caracteres)
 - `lib/constants.ts` (3457 caracteres)
 - `lib/utils.ts` (9035 caracteres)
-- `lib/validations.ts` (10046 caracteres)
+- `lib/validations.ts` (9765 caracteres)
 - `next-env.d.ts` (246 caracteres)
 - `next.config.ts` (1229 caracteres)
-- `package.json` (1262 caracteres)
+- `package.json` (1305 caracteres)
 - `proxy.ts` (3102 caracteres)
 - `public/manifest.json` (1545 caracteres)
 - `store/authStore.ts` (3877 caracteres)
-- `types/index.ts` (5374 caracteres)
+- `types/index.ts` (5394 caracteres)
 
 **Total:** 64 arquivos
 
 ### 📈 Estatísticas por Tipo
 
 - **.css**: 1 arquivo(s), 2,059 caracteres
-- **.json**: 2 arquivo(s), 2,807 caracteres
-- **.ts**: 16 arquivo(s), 70,565 caracteres
-- **.tsx**: 45 arquivo(s), 221,431 caracteres
+- **.json**: 2 arquivo(s), 2,850 caracteres
+- **.ts**: 16 arquivo(s), 71,044 caracteres
+- **.tsx**: 45 arquivo(s), 221,729 caracteres
