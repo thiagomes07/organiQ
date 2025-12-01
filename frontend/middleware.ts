@@ -1,4 +1,3 @@
-// proxy.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -11,7 +10,7 @@ function matchesPath(pathname: string, paths: string[]): boolean {
   );
 }
 
-export default async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Permitir assets e API routes
@@ -32,16 +31,13 @@ export default async function proxy(request: NextRequest) {
   // CASO 1: Rota pública
   if (isPublicPath) {
     if (pathname === "/login" && token) {
-      // Validar token no BACKEND
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/auth/me`,
-          {
-            headers: {
-              Cookie: `accessToken=${token}`,
-            },
-          }
-        );
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+        const response = await fetch(`${apiUrl}/auth/me`, {
+          headers: {
+            Cookie: `accessToken=${token}`,
+          },
+        });
 
         if (response.ok) {
           const { user } = await response.json();
@@ -50,11 +46,10 @@ export default async function proxy(request: NextRequest) {
             : "/app/planos";
           return NextResponse.redirect(new URL(redirectTo, request.url));
         }
-      } catch {
-        // Token inválido, deixa continuar para login
+      } catch (error) {
+        console.error('Middleware auth check failed:', error);
       }
     }
-
     return NextResponse.next();
   }
 
@@ -67,16 +62,13 @@ export default async function proxy(request: NextRequest) {
 
   // CASO 3: Rota protegida com token
   if (isProtectedPath && token) {
-    // Validar no backend
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/me`,
-        {
-          headers: {
-            Cookie: `accessToken=${token}`,
-          },
-        }
-      );
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${apiUrl}/auth/me`, {
+        headers: {
+          Cookie: `accessToken=${token}`,
+        },
+      });
 
       if (!response.ok) {
         return NextResponse.redirect(new URL("/login", request.url));
@@ -85,20 +77,15 @@ export default async function proxy(request: NextRequest) {
       const { user } = await response.json();
       const hasCompletedOnboarding = user.hasCompletedOnboarding ?? false;
 
-      // Se NÃO completou onboarding
-      if (!hasCompletedOnboarding) {
-        if (!isOnboardingPath) {
-          return NextResponse.redirect(new URL("/app/planos", request.url));
-        }
+      if (!hasCompletedOnboarding && !isOnboardingPath) {
+        return NextResponse.redirect(new URL("/app/planos", request.url));
       }
 
-      // Se JÁ completou onboarding
-      if (hasCompletedOnboarding) {
-        if (isOnboardingPath) {
-          return NextResponse.redirect(new URL("/app/materias", request.url));
-        }
+      if (hasCompletedOnboarding && isOnboardingPath) {
+        return NextResponse.redirect(new URL("/app/materias", request.url));
       }
-    } catch {
+    } catch (error) {
+      console.error('Middleware protected route check failed:', error);
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }
