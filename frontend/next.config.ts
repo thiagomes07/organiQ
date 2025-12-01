@@ -1,32 +1,32 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // --- ADICIONE ISTO PARA GARANTIR O BUILD ---
-  // Isso impede que erros simples de tipagem parem o deploy no Amplify
+  // --- SEGURANÇA DE BUILD ---
   typescript: {
     ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // -------------------------------------------
-
-  // Mantemos comentado pois NÃO queremos exportação estática
-  // output: 'export',
+  
+  // --- REATIVAR ESTA LINHA ---
+  output: 'standalone', 
+  // ---------------------------
 
   images: {
-    // remotePatterns controla quais domínios externos são permitidos
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "**.organiq.com.br", // Mantém para o futuro (produção)
+        protocol: 'https',
+        hostname: '**.organiq.com.br',
       },
       {
-        protocol: "https",
-        hostname: "**.amplifyapp.com", // Adiciona para funcionar no ambiente de teste da AWS
+        protocol: 'https',
+        hostname: '**.amplifyapp.com',
       },
     ],
   },
+  // ... resto do arquivo igual ...
+}
 
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
