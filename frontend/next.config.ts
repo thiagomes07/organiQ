@@ -1,9 +1,9 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // --- CONFIGURAÇÃO OBRIGATÓRIA PARA AMPLIFY ---
-  output: 'standalone',
-
+  // --- REMOVIDO O OUTPUT STANDALONE ---
+  // O Amplify vai gerenciar o servidor automaticamente
+  
   // --- CONFIGURAÇÕES DE BUILD ---
   typescript: {
     ignoreBuildErrors: true,
@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
   // --- OTIMIZAÇÕES ---
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
-  }, // <--- A VÍRGULA QUE FALTAVA ESTAVA AQUI
+  },
 
   // --- CABEÇALHOS DE SEGURANÇA ---
   async headers() {
