@@ -121,9 +121,9 @@ export function usePlans() {
       queryKey: planKeys.payment(sessionId || ''),
       queryFn: () => plansApi.getPaymentStatus(sessionId!),
       enabled: enabled && !!sessionId,
-      refetchInterval: (data) => {
+      refetchInterval: (query) => {
         // Parar polling se status for 'paid' ou 'failed'
-        if (data?.status === 'paid' || data?.status === 'failed') {
+        if (query.state.data?.status === 'paid' || query.state.data?.status === 'failed') {
           return false
         }
         return 3000 // Poll a cada 3 segundos

@@ -2,6 +2,16 @@ import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'ax
 import { toast } from 'sonner'
 
 // ============================================
+// TYPES
+// ============================================
+
+interface ApiErrorResponse {
+  message?: string
+  error?: string
+  errors?: Record<string, string>
+}
+
+// ============================================
 // CONFIGURAÇÃO BASE
 // ============================================
 
@@ -62,7 +72,7 @@ api.interceptors.response.use(
     // Resposta bem-sucedida
     return response
   },
-  async (error: AxiosError) => {
+  async (error: AxiosError<ApiErrorResponse>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean
     }
@@ -163,10 +173,11 @@ api.interceptors.response.use(
  */
 export const getErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError<ApiErrorResponse>
     return (
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      error.message ||
+      axiosError.response?.data?.message ||
+      axiosError.response?.data?.error ||
+      axiosError.message ||
       'Erro desconhecido'
     )
   }
@@ -189,8 +200,11 @@ export const isValidationError = (error: unknown): boolean => {
  * Extrai erros de campo do erro de validação
  */
 export const getFieldErrors = (error: unknown): Record<string, string> => {
-  if (axios.isAxiosError(error) && error.response?.status === 422) {
-    return error.response.data?.errors || {}
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError<ApiErrorResponse>
+    if (axiosError.response?.status === 422) {
+      return axiosError.response.data?.errors || {}
+    }
   }
   return {}
 }

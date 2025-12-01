@@ -37,15 +37,15 @@ export interface AuthResponse {
 export interface BusinessUnit {
   id: string;
   name?: string;
-  country: "Brasil"; // Fixo
-  state: string; // UF (AC, AL, AP, ...)
-  city: string; // Nome da cidade
+  country: string;
+  state: string;
+  city: string;
 }
 
 export interface BusinessLocation {
-  country: "Brasil"; // Fixo
-  state: string; // UF obrigatório
-  city: string; // Cidade obrigatória
+  country: string;
+  state: string;
+  city: string;
   hasMultipleUnits: boolean;
   units?: BusinessUnit[];
 }
@@ -60,10 +60,10 @@ export interface BusinessInfo {
   description: string;
   primaryObjective: ObjectiveType;
   secondaryObjective?: ObjectiveType;
-  location: BusinessLocation; // NOVO - Campo obrigatório
+  location: BusinessLocation;
   siteUrl?: string;
   hasBlog: boolean;
-  blogUrls: string[];
+  blogUrls: string[]; // REVERTIDO: deve ser obrigatório mas pode ser array vazio
   articleCount: number;
   brandFile?: File;
 }
@@ -231,10 +231,10 @@ export interface BusinessForm {
   description: string;
   primaryObjective: ObjectiveType;
   secondaryObjective?: ObjectiveType;
-  location: BusinessLocation; // NOVO - Campo obrigatório
+  location: BusinessLocation;
   siteUrl?: string;
   hasBlog: boolean;
-  blogUrls: string[];
+  blogUrls: string[]; // REVERTIDO: deve ser obrigatório mas pode ser array vazio
   articleCount: number;
   brandFile?: File;
 }

@@ -50,7 +50,9 @@ export function BusinessInfoForm({
       blogUrls: [],
       articleCount: 1,
       location: {
-        country: "",
+        country: "Brasil",
+        state: "",
+        city: "",
         hasMultipleUnits: false,
         units: [],
       },
@@ -59,7 +61,7 @@ export function BusinessInfoForm({
   });
 
   const { fields, append, remove } = useFieldArray({
-    control,
+    control: control as any,
     name: "blogUrls",
   });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useFieldArray, Control } from "react-hook-form";
+import { useFieldArray, Control, UseFormSetValue, UseFormWatch, UseFormRegister, FieldErrors } from "react-hook-form";
 import { Plus, X, MapPin, GripVertical } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -35,10 +35,10 @@ import {
 
 interface LocationFieldsProps {
   control: Control<BusinessInput>;
-  watch: (name: string) => any;
-  setValue: (name: string, value: any) => void;
-  errors: any;
-  register: any;
+  watch: UseFormWatch<BusinessInput>;
+  setValue: UseFormSetValue<BusinessInput>;
+  errors: FieldErrors<BusinessInput>;
+  register: UseFormRegister<BusinessInput>;
 }
 
 export function LocationFields({
@@ -56,7 +56,7 @@ export function LocationFields({
   const statePreviousValue = useRef<string>("");
 
   const { fields, append, remove } = useFieldArray({
-    control,
+    control: control as any,
     name: "location.units",
   });
 
@@ -86,8 +86,8 @@ export function LocationFields({
   };
 
   const handleStateChange = (unitIndex: number, newState: string) => {
-    setValue(`location.units.${unitIndex}.state`, newState);
-    setValue(`location.units.${unitIndex}.city`, "");
+    setValue(`location.units.${unitIndex}.state` as any, newState);
+    setValue(`location.units.${unitIndex}.city` as any, "");
   };
 
   return (
@@ -233,7 +233,7 @@ export function LocationFields({
 
             {/* Units List */}
             {fields.map((field, index) => {
-              const unitState = watch(`location.units.${index}.state`);
+              const unitState = watch(`location.units.${index}.state` as any);
 
               return (
                 <div
@@ -282,14 +282,14 @@ export function LocationFields({
                     <Input
                       type="text"
                       placeholder="Ex: Filial Centro, Matriz..."
-                      {...register(`location.units.${index}.name`)}
+                      {...register(`location.units.${index}.name` as any)}
                     />
                   </div>
 
                   {/* País (fixo) */}
                   <input
                     type="hidden"
-                    {...register(`location.units.${index}.country`)}
+                    {...register(`location.units.${index}.country` as any)}
                     value="Brasil"
                   />
                   <div className="bg-gray-50 border border-gray-200 rounded-[var(--radius-sm)] p-2">
@@ -329,9 +329,9 @@ export function LocationFields({
                         Cidade
                       </Label>
                       <Select
-                        value={watch(`location.units.${index}.city`) || ""}
+                        value={watch(`location.units.${index}.city` as any) || ""}
                         onValueChange={(value) =>
-                          setValue(`location.units.${index}.city`, value)
+                          setValue(`location.units.${index}.city` as any, value)
                         }
                       >
                         <SelectTrigger

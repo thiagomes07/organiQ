@@ -1,18 +1,18 @@
-'use client'
+"use client";
 
-import { useForm, useFieldArray } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Plus, X } from 'lucide-react'
-import { competitorsSchema, type CompetitorsInput } from '@/lib/validations'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus, X } from "lucide-react";
+import { competitorsSchema, type CompetitorsInput } from "@/lib/validations";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface CompetitorsFormProps {
-  onSubmit: (data: CompetitorsInput) => void
-  onBack: () => void
-  isLoading?: boolean
-  defaultValues?: Partial<CompetitorsInput>
+  onSubmit: (data: CompetitorsInput) => void;
+  onBack: () => void;
+  isLoading?: boolean;
+  defaultValues?: Partial<CompetitorsInput>;
 }
 
 export function CompetitorsForm({
@@ -31,12 +31,12 @@ export function CompetitorsForm({
     defaultValues: {
       competitorUrls: defaultValues?.competitorUrls || [],
     },
-  })
+  });
 
   const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'competitorUrls',
-  })
+    control: control as any,
+    name: "competitorUrls",
+  });
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -46,7 +46,8 @@ export function CompetitorsForm({
           Concorrentes (Opcional)
         </h3>
         <p className="text-sm font-onest text-[var(--color-primary-dark)]/70">
-          Adicione URLs de concorrentes para criar uma estratégia de SEO mais competitiva. Esta etapa é opcional, mas recomendada.
+          Adicione URLs de concorrentes para criar uma estratégia de SEO mais
+          competitiva. Esta etapa é opcional, mas recomendada.
         </p>
       </div>
 
@@ -61,7 +62,7 @@ export function CompetitorsForm({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append('')}
+              onClick={() => append("")}
             >
               <Plus className="h-4 w-4 mr-2" />
               Adicionar primeiro concorrente
@@ -105,7 +106,7 @@ export function CompetitorsForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => append('')}
+                onClick={() => append("")}
                 className="w-full"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -125,7 +126,9 @@ export function CompetitorsForm({
       {/* Info Box */}
       <div className="bg-[var(--color-primary-purple)]/5 border border-[var(--color-primary-purple)]/20 rounded-[var(--radius-md)] p-4">
         <p className="text-sm font-onest text-[var(--color-primary-dark)]/80">
-          💡 <strong>Dica:</strong> Adicione sites que produzem conteúdo similar ao seu. Nossa IA analisará suas estratégias de SEO para criar matérias ainda melhores.
+          💡 <strong>Dica:</strong> Adicione sites que produzem conteúdo similar
+          ao seu. Nossa IA analisará suas estratégias de SEO para criar matérias
+          ainda melhores.
         </p>
       </div>
 
@@ -147,9 +150,9 @@ export function CompetitorsForm({
           isLoading={isLoading}
           disabled={isLoading}
         >
-          {fields.length === 0 ? 'Pular esta etapa' : 'Próximo'}
+          {fields.length === 0 ? "Pular esta etapa" : "Próximo"}
         </Button>
       </div>
     </form>
-  )
+  );
 }

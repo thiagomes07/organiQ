@@ -18,7 +18,7 @@ def scan_repository(root_path, output_file="documentacao_codigo.md"):
     ignore_patterns = {
         'node_modules', '.next', '.git', 'dist', 'build', 
         '.env.local', 'package-lock.json', '.gitignore', 'README.md',
-        'package.json', 'tsconfig.json', 'postcss.config.mjs', 
+        'tsconfig.json', 'postcss.config.mjs', 'documentacao_codigo.md',
         'eslint.config.mjs', 'tailwind.config.ts', 'brazil-locations.ts'
     }
     

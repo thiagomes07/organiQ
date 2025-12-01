@@ -67,9 +67,9 @@ export function useArticles(filters: ArticleFilters = {}) {
     queryKey: articleKeys.list(filters),
     queryFn: () => articlesApi.getArticles(filters),
     staleTime: 30000, // 30 segundos
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Auto-refetch se houver artigos em geração/publicação
-      const hasActiveArticles = data?.articles.some(
+      const hasActiveArticles = query.state.data?.articles.some(
         (article) => article.status === 'generating' || article.status === 'publishing'
       )
       return hasActiveArticles ? 5000 : false // 5 segundos se ativo, senão não refetch

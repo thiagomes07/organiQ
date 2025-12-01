@@ -38,24 +38,20 @@ export const registerSchema = z
   });
 
 // ============================================
-// LOCATION SCHEMAS (ATUALIZADO PARA BRASIL)
+// LOCATION SCHEMAS (CORRIGIDO - country agora é obrigatório)
 // ============================================
 
 export const businessUnitSchema = z.object({
   id: z.string().uuid("ID inválido"),
   name: z.string().optional(),
-  country: z.literal("Brasil", {
-    errorMap: () => ({ message: "Apenas Brasil é suportado no momento" })
-  }),
+  country: z.string().min(1, "País é obrigatório"),
   state: z.string().min(1, "Estado é obrigatório"),
   city: z.string().min(1, "Cidade é obrigatória"),
 });
 
 export const locationSchema = z
   .object({
-    country: z.literal("Brasil", {
-      errorMap: () => ({ message: "Apenas Brasil é suportado no momento" })
-    }).default("Brasil"),
+    country: z.string().min(1, "País é obrigatório"),
     state: z.string().min(1, "Estado é obrigatório"),
     city: z.string().min(1, "Cidade é obrigatória"),
     hasMultipleUnits: z.boolean(),
@@ -104,7 +100,7 @@ export const locationSchema = z
 // ============================================
 
 const objectiveEnum = z.enum(["leads", "sales", "branding"], {
-  errorMap: () => ({ message: "Selecione um objetivo válido" }),
+  message: "Selecione um objetivo válido",
 });
 
 export const businessSchema = z
@@ -122,16 +118,13 @@ export const businessSchema = z
 
     secondaryObjective: objectiveEnum.optional(),
 
-    location: locationSchema, // NOVO - Campo obrigatório
+    location: locationSchema,
 
     siteUrl: z.string().url("URL inválida").optional().or(z.literal("")),
 
-    hasBlog: z.boolean().default(false),
+    hasBlog: z.boolean(),
 
-    blogUrls: z.array(z.string().url("URL inválida")).refine((urls) => {
-      const domains = urls.map((url) => new URL(url).hostname);
-      return new Set(domains).size === domains.length;
-    }, "URLs devem ser de domínios diferentes"),
+    blogUrls: z.array(z.string().url("URL inválida")),
 
     articleCount: z
       .number()
@@ -186,8 +179,7 @@ export const businessSchema = z
 export const competitorsSchema = z.object({
   competitorUrls: z
     .array(z.string().url("URL inválida"))
-    .max(10, "Máximo de 10 concorrentes")
-    .default([]),
+    .max(10, "Máximo de 10 concorrentes"),
 });
 
 export const integrationsSchema = z
@@ -209,14 +201,14 @@ export const integrationsSchema = z
 
     searchConsole: z
       .object({
-        enabled: z.boolean().default(false),
+        enabled: z.boolean(),
         propertyUrl: z.string().url("URL inválida").optional(),
       })
       .optional(),
 
     analytics: z
       .object({
-        enabled: z.boolean().default(false),
+        enabled: z.boolean(),
         measurementId: z
           .string()
           .regex(
@@ -351,7 +343,7 @@ export type CompetitorsInput = z.infer<typeof competitorsSchema>;
 export type IntegrationsInput = z.infer<typeof integrationsSchema>;
 export type NewArticlesInput = z.infer<typeof newArticlesSchema>;
 export type ArticleIdeaInput = z.infer<typeof articleIdeaSchema>;
-export type PublishPayloadInput = z.infer<typeof publishPayloadSchema>;
+export type PublishPayload = z.infer<typeof publishPayloadSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 export type IntegrationsUpdateInput = z.infer<typeof integrationsUpdateSchema>;
 export type ArticlesQueryInput = z.infer<typeof articlesQuerySchema>;
