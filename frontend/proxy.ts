@@ -10,7 +10,8 @@ function matchesPath(pathname: string, paths: string[]): boolean {
   );
 }
 
-export async function middleware(request: NextRequest) {
+// MUDANÇA CRÍTICA: Exportar como "proxy" ao invés de "middleware"
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Permitir assets e API routes
@@ -47,7 +48,7 @@ export async function middleware(request: NextRequest) {
           return NextResponse.redirect(new URL(redirectTo, request.url));
         }
       } catch (error) {
-        console.error('Middleware auth check failed:', error);
+        console.error('Proxy auth check failed:', error);
       }
     }
     return NextResponse.next();
@@ -85,7 +86,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL("/app/materias", request.url));
       }
     } catch (error) {
-      console.error('Middleware protected route check failed:', error);
+      console.error('Proxy protected route check failed:', error);
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }
