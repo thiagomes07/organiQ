@@ -85,7 +85,7 @@
 │                  INFRASTRUCTURE                       │
 │  ┌────────────┬──────────────┬────────────────────┐  │
 │  │ Repository │  Queue       │  External Services │  │
-│  │ (DB)       │  (SQS)       │  (OpenAI, WP, S3)  │  │
+│  │ (DB)       │  (SQS)       │  (agente próprio, WP, S3)  │  │
 │  │ - Postgres │  - Workers   │  - HTTP Clients    │  │
 │  │ - RDS      │  - Retry     │  - OAuth Flows     │  │
 │  └────────────┴──────────────┴────────────────────┘  │
@@ -121,8 +121,8 @@
 
 **Clients Externos**
 - **net/http**: HTTP client nativo
-- **OpenAI Go SDK**: Cliente oficial OpenAI
-- **AWS SDK Go v2**: Serviços AWS (S3, SQS, Secrets Manager)
+- **AI**: agente próprio
+- **AWS SDK Go v2**: Serviços AWS (S3, SQS)
 
 ---
 
@@ -250,24 +250,6 @@ MINIO_BUCKET=organiq-dev-brand-files
 QUEUE_ENDPOINT=http://localhost:4566
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=test
-AWS_SECRET_ACCESS_KEY=test
-```
-
-**Produção (AWS Secrets Manager + Environment Variables)**
-```env
-ENV=production
-DB_HOST=organiq-prod.abc123.us-east-1.rds.amazonaws.com
-DB_PORT=5432
-DB_USER=organiq_prod
-DB_PASSWORD=<secret-from-secrets-manager>
-DB_NAME=organiq_prod
-DB_SSL_MODE=require
-
-STORAGE_TYPE=s3
-S3_BUCKET=organiq-prod-brand-files
-S3_REGION=us-east-1
-
-# AWS SDK usa credenciais IAM do ECS automaticamente
 ```
 
 ### 2.6 Injeção de Dependências
@@ -966,11 +948,11 @@ Salva configurações de integrações (WordPress, Google).
   1. Atualizar `ArticleJob.status = "processing"`
   2. **Análise de Concorrentes**:
      - Scraping dos URLs (extração de títulos, meta descriptions)
-     - Análise de tópicos com OpenAI (GPT-4)
+     - Análise de tópicos com agente próprio
   3. **Análise do Search Console** (se conectado):
      - Buscar top 20 queries com impressões > 100
      - Filtrar por taxa de clique < 5% (oportunidades)
-  4. **Geração de Ideias com OpenAI**:
+  4. **Geração de Ideias com agente próprio**:
      - Prompt personalizado com:
        - Objetivos do negócio
        - Localização (para SEO local)
@@ -1034,7 +1016,7 @@ Verifica status da geração de ideias (polling).
 {
   "jobId": "uuid",
   "status": "failed",
-  "errorMessage": "Erro ao conectar com OpenAI API. Tente novamente."
+  "errorMessage": "Erro ao conectar com agente próprio. Tente novamente."
 }
 ```
 
@@ -1115,7 +1097,7 @@ Inicia publicação assíncrona de matérias aprovadas.
 
 **Worker Assíncrono (por artigo)**:
 1. Atualizar `Article.status = "generating"`
-2. **Escrever Conteúdo com OpenAI**:
+2. **Escrever Conteúdo com agente próprio**:
    - Prompt incluindo:
      - Título e resumo da ideia
      - Feedback do usuário (se houver)
@@ -1394,7 +1376,7 @@ Verifica saúde da API e dependências.
     "database": "healthy",
     "storage": "healthy",
     "queue": "healthy",
-    "openai": "healthy"
+    "agent": "healthy"
   }
 }
 ```
@@ -1409,7 +1391,7 @@ Verifica saúde da API e dependências.
     "database": "healthy",
     "storage": "unhealthy",
     "queue": "healthy",
-    "openai": "degraded"
+    "agent": "degraded"
   }
 }
 ```
@@ -1418,7 +1400,7 @@ Verifica saúde da API e dependências.
 1. Testar conexão com banco (query simples)
 2. Testar storage (HEAD bucket)
 3. Testar fila (listar queues)
-4. Testar OpenAI (ping endpoint)
+4. Testar agente próprio (ping endpoint)
 5. Retornar agregado
 
 ---
@@ -1736,7 +1718,7 @@ backend/
 │   │   │   └── factory.go
 │   │   │
 │   │   ├── ai/                       # Serviços de IA
-│   │   │   ├── openai_client.go
+│   │   │   ├── agent_client.go
 │   │   │   └── prompts.go
 │   │   │
 │   │   ├── wordpress/                # Cliente WordPress
@@ -1987,7 +1969,7 @@ func (uc *RegisterUserUseCase) Execute(ctx context.Context, input RegisterUserIn
 
 **Contém**:
 - Implementações de Repository usando GORM
-- Clients externos (OpenAI, WordPress, AWS)
+- Clients externos (agente próprio, WordPress, AWS)
 - Conexões com banco, storage, filas
 - Migrations SQL
 
@@ -2195,9 +2177,6 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
       "environment": [
         {"name": "ENV", "value": "production"},
         {"name": "DB_HOST", "value": "organiq-prod.rds.amazonaws.com"}
-      ],
-      "secrets": [
-        {"name": "DB_PASSWORD", "valueFrom": "arn:aws:secretsmanager:..."}
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
@@ -2422,7 +2401,7 @@ docker push 123456.dkr.ecr.us-east-1.amazonaws.com/organiq-api:latest
 - Error rate > 5% por 1 minuto → Slack webhook
 
 **AWS X-Ray**:
-- Distributed tracing entre API → RDS → SQS → OpenAI
+- Distributed tracing entre API → RDS → SQS → agente próprio
 - Identificar bottlenecks em requisições lentas
 - Visualizar latência por componente
 
