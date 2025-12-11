@@ -1,5 +1,0 @@
-google-adk
-beautifulsoup4
-requests
-python-dotenv
-openai
