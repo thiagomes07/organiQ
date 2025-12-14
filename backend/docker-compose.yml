@@ -1,0 +1,210 @@
+services:
+  # ==========================================
+  # API Backend (Go Application)
+  # ==========================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: organiq-api
+    ports:
+      - "8080:8080"
+    environment:
+      - ENV=development
+      # Database
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=organiq
+      - DB_PASSWORD=dev_password
+      - DB_NAME=organiq_dev
+      - DB_SSL_MODE=disable
+      
+      # Storage (MinIO)
+      - STORAGE_TYPE=minio
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=organiq-dev-brand-files
+      - MINIO_USE_SSL=false
+      
+      # Queue (LocalStack SQS)
+      - QUEUE_ENDPOINT=http://localstack:4566
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      
+      # AI
+      - AI_API_KEY=your_ai_api_key_here
+      - AI_PROVIDER=openai
+      - AI_MODEL=gpt-4-turbo-preview
+      
+      # JWT & Crypto
+      - JWT_SECRET=dev_jwt_secret_key_change_in_production_min_32_chars_long
+      - PASSWORD_PEPPER=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6a1b2c3d4
+      
+      # CORS
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+      
+      # Server
+      - SERVER_PORT=8080
+      - SERVER_HOST=0.0.0.0
+      - SERVER_READ_TIMEOUT=30s
+      - SERVER_WRITE_TIMEOUT=30s
+      
+      # Logger
+      - LOG_LEVEL=debug
+      - LOG_FORMAT=console
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started # MinIO demora um pouco, started é mais seguro pra evitar timeout no boot
+      localstack:
+        condition: service_healthy
+    networks:
+      - organiq-network
+    restart: on-failure # Reinicia se falhar, mas não se você parar manualmente
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ==========================================
+  # PostgreSQL Database
+  # ==========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: organiq-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=organiq
+      - POSTGRES_PASSWORD=dev_password
+      - POSTGRES_DB=organiq_dev
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U organiq -d organiq_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - organiq-network
+    restart: unless-stopped
+
+  # ==========================================
+  # MinIO (S3-Compatible Storage)
+  # ==========================================
+  minio:
+    image: minio/minio:latest
+    container_name: organiq-minio
+    ports:
+      - "9000:9000"      # API
+      - "9001:9001"      # Console
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - organiq-network
+    restart: unless-stopped
+
+  # ==========================================
+  # MinIO Client (Criação de Bucket)
+  # ==========================================
+  minio-setup:
+    image: minio/mc:latest
+    container_name: organiq-minio-setup
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      mc mb myminio/organiq-dev-brand-files --ignore-existing;
+      mc anonymous set download myminio/organiq-dev-brand-files;
+      exit 0;
+      "
+    networks:
+      - organiq-network
+
+  # ==========================================
+  # LocalStack (AWS Services Local)
+  # ==========================================
+  localstack:
+    image: localstack/localstack:3.0
+    container_name: organiq-localstack
+    ports:
+      - "4566:4566"      # LocalStack Gateway
+    environment:
+      - SERVICES=sqs
+      - DEBUG=0
+      - PERSISTENCE=0
+      - EAGER_SERVICE_LOADING=1
+      - SKIP_SSL_CERT_DOWNLOAD=1
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - organiq-network
+    restart: unless-stopped
+
+  # ==========================================
+  # LocalStack Setup (Criar Filas SQS)
+  # ==========================================
+  localstack-setup:
+    image: amazon/aws-cli:latest
+    container_name: organiq-localstack-setup
+    depends_on:
+      localstack:
+        condition: service_healthy
+    environment:
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Aguardando LocalStack ficar pronto...';
+      sleep 10;
+      echo 'Criando filas SQS...';
+      aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name article-generation-queue || true;
+      aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name article-publish-queue || true;
+      echo 'Filas criadas com sucesso!';
+      exit 0;
+      "
+    networks:
+      - organiq-network
+
+# ==========================================
+# Volumes Persistentes
+# ==========================================
+volumes:
+  postgres_data:
+    driver: local
+  minio_data:
+    driver: local
+  localstack_data:
+    driver: local
+
+# ==========================================
+# Network
+# ==========================================
+networks:
+  organiq-network:
+    driver: bridge

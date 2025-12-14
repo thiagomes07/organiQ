@@ -1,0 +1,325 @@
+# ==========================================
+# Go - Binários e Build Artifacts
+# ==========================================
+# Binários compilados
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+build/
+*.test
+*.out
+
+# Diretório de build
+/bin/
+/pkg/
+/target/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Arquivos de coverage
+*.coverprofile
+coverage.txt
+coverage.html
+coverage.out
+.coverage/
+
+# ==========================================
+# Dependências Go
+# ==========================================
+# Vendor (se você usar, descomente)
+# vendor/
+go_repo_dump.md
+
+# ==========================================
+# Variáveis de Ambiente e Secrets
+# ==========================================
+# NUNCA commite arquivos com secrets!
+.env
+.env.*
+!.env.example
+*.env
+.envrc
+
+# Arquivos de configuração locais
+config.local.yml
+config.local.json
+*.local.*
+
+# Secrets e credenciais
+secrets/
+credentials/
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+service-account.json
+credentials.json
+
+# ==========================================
+# IDEs e Editores
+# ==========================================
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# GoLand / IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea_modules/
+
+# Vim
+*.swp
+*.swo
+*~
+.vim/
+*.vim
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Eclipse
+.project
+.classpath
+.settings/
+.metadata/
+
+# ==========================================
+# Sistema Operacional
+# ==========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ==========================================
+# Logs e Dados Temporários
+# ==========================================
+# Logs
+*.log
+logs/
+log/
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dados temporários
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*.cache
+.cache/
+
+# PID files
+*.pid
+*.seed
+*.pid.lock
+
+# ==========================================
+# Docker
+# ==========================================
+# Docker volumes locais
+postgres_data/
+minio_data/
+localstack_data/
+pgadmin_data/
+
+# Docker override (se você criar)
+docker-compose.override.yml
+docker-compose.local.yml
+
+# ==========================================
+# Database
+# ==========================================
+# Dumps de banco
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+!internal/infra/database/migrations/*.sql
+
+# Backups
+*.backup
+*.dump
+backups/
+
+# ==========================================
+# Testes e Coverage
+# ==========================================
+# Arquivos de teste
+testdata/
+.test/
+test-results/
+
+# Mocks gerados (se você gerar)
+# *_mock.go
+# mocks/
+
+# Benchmarks
+*.bench
+
+# ==========================================
+# Ferramentas de Build e CI/CD
+# ==========================================
+# Air (hot reload)
+.air.toml
+tmp/
+
+# Taskfile
+.task/
+
+# Node (se você usar para ferramentas)
+node_modules/
+package-lock.json
+yarn.lock
+
+# ==========================================
+# Documentação Gerada
+# ==========================================
+# Swagger/OpenAPI gerado
+docs/swagger.json
+docs/swagger.yaml
+# Mantenha a pasta docs/ mas ignore gerados
+!docs/*.md
+
+# Godoc
+godoc/
+
+# ==========================================
+# Profiling e Debug
+# ==========================================
+# Profiling
+*.prof
+*.pprof
+cpu.prof
+mem.prof
+profile.out
+
+# Debug
+__debug_bin
+debug
+
+# ==========================================
+# Arquivos de Migração Temporários
+# ==========================================
+# Migrations temporárias (não o diretório)
+# migrations/*.tmp
+
+# ==========================================
+# Upload de Arquivos (Desenvolvimento)
+# ==========================================
+# Se você tiver upload local
+uploads/
+files/
+media/
+
+# ==========================================
+# Ferramentas Específicas
+# ==========================================
+# Kubernetes local
+*.kubeconfig
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+override.tf
+override.tf.json
+
+# AWS
+.aws/
+
+# ==========================================
+# Miscelânea
+# ==========================================
+# Arquivos de patch
+*.orig
+*.rej
+
+# Arquivos compactados (geralmente não devem estar no repo)
+*.zip
+*.tar.gz
+*.tar
+*.rar
+*.7z
+
+# Certificados de desenvolvimento
+*.local.pem
+localhost.pem
+localhost-key.pem
+
+# ==========================================
+# Específicos do Projeto organiQ
+# ==========================================
+# Brand files de teste (se houver)
+brand-files/
+
+# Filas locais (LocalStack)
+.localstack/
+
+# Cache de AI responses (se implementar)
+.ai-cache/
