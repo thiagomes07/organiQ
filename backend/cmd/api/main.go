@@ -1,3 +1,5 @@
+// cmd/api/main.go - TRECHO COMPLETO COM WORKERS
+
 package main
 
 import (
@@ -12,11 +14,23 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	
-	"github.com/thiagomes07/organiQ/backend/config"
-	"github.com/thiagomes07/organiQ/backend/internal/infra/database"
+
+	"organiq/config"
+	domainrepo "organiq/internal/domain/repository"
+	"organiq/internal/handler"
+	"organiq/internal/infra/ai"
+	"organiq/internal/infra/database"
+	"organiq/internal/infra/queue"
+	"organiq/internal/infra/repository/postgres"
+	"organiq/internal/infra/storage"
+	authMiddleware "organiq/internal/middleware"
+	accountUC "organiq/internal/usecase/account"
+	"organiq/internal/usecase/article"
+	"organiq/internal/usecase/auth"
+	"organiq/internal/usecase/wizard"
+	"organiq/internal/util"
+	"organiq/internal/worker"
 )
 
 func main() {
@@ -27,41 +41,338 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Setup logger
-	setupLogger(cfg)
-	
+	loggerCleanup, err := util.InitLogger(cfg, util.LoggerOptions{
+		Service:     "organiq-api",
+		IncludeHook: true,
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
+		os.Exit(1)
+	}
+	if loggerCleanup != nil {
+		defer loggerCleanup()
+	}
+
 	log.Info().
 		Str("environment", cfg.Environment).
 		Str("version", "1.0.0").
 		Msg("Starting organiQ Backend")
 
-	// Initialize database connection
+	// Initialize database
 	db, err := database.Connect(cfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to connect to database")
 	}
 	defer database.Close(db)
-	
+
 	log.Info().Msg("Database connection established")
 
 	// Run migrations
 	if err := database.RunMigrations(db); err != nil {
 		log.Fatal().Err(err).Msg("Failed to run migrations")
 	}
-	
+
 	log.Info().Msg("Database migrations completed")
 
-	// TODO: Initialize storage (MinIO/S3)
-	// TODO: Initialize queue (LocalStack/SQS)
-	// TODO: Initialize repositories
-	// TODO: Initialize use cases
-	// TODO: Initialize handlers
-	// TODO: Start workers
+	// ============================================
+	// INICIALIZAR SERVIÇOS INFRAESTRUTURA
+	// ============================================
 
-	// Setup HTTP router
-	router := setupRouter(cfg)
+	// Crypto service
+	cryptoService := util.NewCryptoService(
+		cfg.Auth.PasswordPepper,
+		cfg.Auth.JWTSecret,
+	)
 
-	// Create HTTP server
+	// Storage service
+	storageService, err := storage.NewStorageService(cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize storage service")
+	}
+	log.Info().Msg("Storage service initialized")
+
+	// Queue service
+	queueService, err := queue.NewQueueService(cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize queue service")
+	}
+	log.Info().Msg("Queue service initialized")
+
+	// AI agent client
+	agentClient := ai.NewAgentClient(cfg)
+	log.Info().Msg("AI agent client initialized")
+
+	// ============================================
+	// REPOSITORIES
+	// ============================================
+
+	repositories := &struct {
+		User         domainrepo.UserRepository
+		RefreshToken domainrepo.RefreshTokenRepository
+		Plan         domainrepo.PlanRepository
+		Business     domainrepo.BusinessRepository
+		Integration  domainrepo.IntegrationRepository
+		ArticleJob   domainrepo.ArticleJobRepository
+		ArticleIdea  domainrepo.ArticleIdeaRepository
+		Article      domainrepo.ArticleRepository
+		Payment      domainrepo.PaymentRepository
+	}{
+		User:         postgres.NewUserRepository(db),
+		RefreshToken: postgres.NewRefreshTokenRepository(db),
+		Plan:         postgres.NewPlanRepository(db),
+		Business:     postgres.NewBusinessRepository(db),
+		Integration:  postgres.NewIntegrationRepository(db),
+		ArticleJob:   postgres.NewArticleJobRepository(db),
+		ArticleIdea:  postgres.NewArticleIdeaRepository(db),
+		Article:      postgres.NewArticleRepository(db),
+		Payment:      postgres.NewPaymentRepository(db),
+	}
+
+	log.Info().Msg("All repositories initialized")
+
+	// ============================================
+	// USE CASES: AUTH
+	// ============================================
+
+	registerUC := auth.NewRegisterUserUseCase(
+		repositories.User,
+		repositories.Plan,
+		repositories.RefreshToken,
+		cryptoService,
+	)
+
+	loginUC := auth.NewLoginUserUseCase(
+		repositories.User,
+		repositories.RefreshToken,
+		cryptoService,
+	)
+
+	refreshUC := auth.NewRefreshAccessTokenUseCase(
+		repositories.User,
+		repositories.RefreshToken,
+		cryptoService,
+	)
+
+	logoutUC := auth.NewLogoutUserUseCase(
+		repositories.RefreshToken,
+		cryptoService,
+	)
+
+	getMeUC := auth.NewGetMeUseCase(
+		repositories.User,
+	)
+
+	// ============================================
+	// USE CASES: WIZARD
+	// ============================================
+
+	saveBusinessUC := wizard.NewSaveBusinessUseCase(
+		repositories.Business,
+		storageService,
+	)
+
+	saveCompetitorsUC := wizard.NewSaveCompetitorsUseCase(
+		repositories.Business,
+	)
+
+	saveIntegrationsUC := wizard.NewSaveIntegrationsUseCase(
+		repositories.Integration,
+		cryptoService,
+	)
+
+	generateIdeasUC := wizard.NewGenerateIdeasUseCase(
+		repositories.User,
+		repositories.Business,
+		repositories.ArticleJob,
+		queueService,
+	)
+
+	getIdeasStatusUC := wizard.NewGetIdeasStatusUseCase(
+		repositories.User,
+		repositories.ArticleJob,
+		repositories.ArticleIdea,
+	)
+
+	// ============================================
+	// USE CASES: ARTICLE
+	// ============================================
+
+	listArticlesUC := article.NewListArticlesUseCase(
+		repositories.Article,
+	)
+
+	getArticleUC := article.NewGetArticleUseCase(
+		repositories.Article,
+	)
+
+	republishArticleUC := article.NewRepublishArticleUseCase(
+		repositories.Article,
+		repositories.ArticleIdea,
+		queueService,
+	)
+
+	publishArticlesUC := wizard.NewPublishArticlesUseCase(
+		repositories.User,
+		repositories.Plan,
+		repositories.ArticleIdea,
+		repositories.Article,
+		repositories.ArticleJob,
+		queueService,
+	)
+
+	// ============================================
+	// USE CASES: ACCOUNT
+	// ============================================
+
+	getAccountUC := accountUC.NewGetAccountUseCase(
+		repositories.User,
+		repositories.Plan,
+		repositories.Integration,
+	)
+
+	updateProfileUC := accountUC.NewUpdateProfileUseCase(
+		repositories.User,
+	)
+
+	updateIntegrationsUC := accountUC.NewUpdateIntegrationsUseCase(
+		repositories.Integration,
+		cryptoService,
+	)
+
+	getPlanUC := accountUC.NewGetPlanUseCase(
+		repositories.User,
+		repositories.Plan,
+	)
+
+	log.Info().Msg("All use cases initialized")
+
+	// ============================================
+	// HANDLERS
+	// ============================================
+
+	authHandler := handler.NewAuthHandler(
+		registerUC,
+		loginUC,
+		refreshUC,
+		logoutUC,
+		getMeUC,
+		repositories.Plan,
+	)
+
+	planHandler := handler.NewPlanHandler(repositories.Plan)
+
+	wizardHandler := handler.NewWizardHandler(
+		saveBusinessUC,
+		saveCompetitorsUC,
+		saveIntegrationsUC,
+		generateIdeasUC,
+		getIdeasStatusUC,
+		publishArticlesUC,
+	)
+
+	// ============================================
+	// PAYMENT HANDLER
+	// ============================================
+
+	paymentHandler := handler.NewPaymentHandler(
+		repositories.User,
+		repositories.Plan,
+		repositories.Payment,
+		cryptoService,
+		cfg.Payment.StripeSecretKey,
+		"", // stripePubKey (se necessário)
+		cfg.Payment.StripeWebhookSecret,
+		cfg.Payment.MercadoPagoAccessToken,
+		cfg.Payment.MercadoPagoWebhookSecret,
+	)
+
+	log.Info().Msg("PaymentHandler inicializado")
+
+	// ============================================
+	// ARTICLE HANDLER
+	// ============================================
+
+	articleHandler := handler.NewArticleHandler(
+		listArticlesUC,
+		getArticleUC,
+		republishArticleUC,
+	)
+
+	log.Info().Msg("ArticleHandler inicializado")
+
+	// ============================================
+	// ACCOUNT HANDLER
+	// ============================================
+
+	accountHandler := handler.NewAccountHandler(
+		getAccountUC,
+		updateProfileUC,
+		updateIntegrationsUC,
+		getPlanUC,
+	)
+
+	log.Info().Msg("AccountHandler inicializado")
+
+	healthHandler := handler.NewHealthHandler(
+		db,
+		storageService,
+		queueService,
+		[]string{
+			cfg.Queue.ArticleGenerationQueue,
+			cfg.Queue.ArticlePublishQueue,
+		},
+	)
+
+	log.Info().Msg("All handlers initialized")
+
+	// ============================================
+	// INICIALIZAR WORKER POOL
+	// ============================================
+
+	workerPoolSize := cfg.Worker.PoolSize
+	if workerPoolSize <= 0 {
+		workerPoolSize = 5 // Default
+	}
+
+	workerPool := worker.NewWorkerPool(
+		workerPoolSize,
+		queueService,
+		repositories.ArticleJob,
+		repositories.ArticleIdea,
+		repositories.Article,
+		repositories.Business,
+		repositories.Integration,
+		agentClient,
+		cryptoService,
+		cfg.Worker.PollInterval,
+		cfg.Worker.MaxRetries,
+	)
+
+	log.Info().Int("pool_size", workerPoolSize).Msg("Worker pool created")
+
+	// ============================================
+	// SETUP HTTP ROUTER
+	// ============================================
+
+	// Rate limiters por endpoint conforme spec 3.5
+	rateLimiters := &RateLimiters{}
+	if cfg.RateLimit.Enabled {
+		// Global: 1000 req/1min por IP
+		rateLimiters.Global = authMiddleware.NewRateLimiter(1000, time.Minute)
+		// Auth: 5 req/15min por IP
+		rateLimiters.Auth = authMiddleware.NewRateLimiter(5, 15*time.Minute)
+		// Wizard generate/publish: 10 req/1h por User
+		rateLimiters.Wizard = authMiddleware.NewRateLimiter(10, time.Hour)
+		// Articles: 100 req/1min por User
+		rateLimiters.Articles = authMiddleware.NewRateLimiter(100, time.Minute)
+	}
+
+	router := setupRouter(cfg, authHandler, planHandler, wizardHandler, paymentHandler, articleHandler, accountHandler, healthHandler, cryptoService, rateLimiters)
+
+	// ============================================
+	// CREATE HTTP SERVER
+	// ============================================
+
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port),
 		Handler:      router,
@@ -70,194 +381,241 @@ func main() {
 		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
 
-	// Start server in goroutine
+	log.Info().Msg("HTTP server created")
+
+	// ============================================
+	// START WORKER POOL
+	// ============================================
+
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	workerShutdownDone := workerPool.Start(workerCtx)
+
+	log.Info().Msg("Worker pool started")
+
+	// ============================================
+	// START HTTP SERVER
+	// ============================================
+
 	serverErrors := make(chan error, 1)
 	go func() {
 		log.Info().
 			Str("address", server.Addr).
-			Msg("Server listening")
+			Msg("HTTP Server listening")
 		serverErrors <- server.ListenAndServe()
 	}()
 
-	// Wait for interrupt signal
+	// ============================================
+	// GRACEFUL SHUTDOWN LOGIC
+	// ============================================
+
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 
 	select {
 	case err := <-serverErrors:
-		log.Fatal().Err(err).Msg("Server error")
+		if err != http.ErrServerClosed {
+			log.Fatal().Err(err).Msg("Server error")
+		}
+
 	case sig := <-shutdown:
 		log.Info().
 			Str("signal", sig.String()).
-			Msg("Shutdown signal received")
+			Msg("Shutdown signal received - starting graceful shutdown")
 
-		// Graceful shutdown
-		ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
+		// ============================================
+		// FASE 1: Stop HTTP server (sem aceitar novos requests)
+		// ============================================
+
+		log.Info().Msg("Stopping HTTP server...")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		if err := server.Shutdown(ctx); err != nil {
-			log.Error().Err(err).Msg("Graceful shutdown failed")
+			log.Error().Err(err).Msg("HTTP server shutdown error")
 			if err := server.Close(); err != nil {
-				log.Fatal().Err(err).Msg("Could not stop server")
+				log.Fatal().Err(err).Msg("Could not close server")
 			}
 		}
-		
-		log.Info().Msg("Server stopped gracefully")
+
+		log.Info().Msg("HTTP server stopped")
+
+		// ============================================
+		// FASE 2: Stop worker pool (graceful shutdown com timeout)
+		// ============================================
+
+		log.Info().Msg("Stopping worker pool...")
+
+		// Cancelar contexto dos workers
+		workerCancel()
+
+		// Aguardar shutdown completo com timeout
+		workerShutdownCtx, workerShutdownCancel := context.WithTimeout(
+			context.Background(),
+			cfg.Server.ShutdownTimeout,
+		)
+		defer workerShutdownCancel()
+
+		select {
+		case <-workerShutdownDone:
+			log.Info().Msg("Worker pool stopped gracefully")
+
+		case <-workerShutdownCtx.Done():
+			log.Warn().
+				Dur("timeout", cfg.Server.ShutdownTimeout).
+				Msg("Worker pool shutdown timeout - forcing exit")
+		}
+
+		log.Info().Msg("Server and workers stopped successfully")
 	}
 }
 
-func setupLogger(cfg *config.Config) {
-	// Set log level
-	level, err := zerolog.ParseLevel(cfg.Logger.Level)
-	if err != nil {
-		level = zerolog.InfoLevel
-	}
-	zerolog.SetGlobalLevel(level)
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
 
-	// Set output format
-	if cfg.Logger.Format == "console" {
-		log.Logger = log.Output(zerolog.ConsoleWriter{
-			Out:        os.Stdout,
-			TimeFormat: time.RFC3339,
-		})
-	} else {
-		// JSON format (default)
-		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	}
-
-	// Add context fields
-	log.Logger = log.With().
-		Str("service", "organiq-api").
-		Str("environment", cfg.Environment).
-		Logger()
+// RateLimiters agrupa os rate limiters por endpoint conforme spec 3.5
+type RateLimiters struct {
+	Global   *authMiddleware.RateLimiter // 1000 req/1min por IP
+	Auth     *authMiddleware.RateLimiter // 5 req/15min por IP
+	Wizard   *authMiddleware.RateLimiter // 10 req/1h por User
+	Articles *authMiddleware.RateLimiter // 100 req/1min por User
 }
 
-func setupRouter(cfg *config.Config) *chi.Mux {
+func setupRouter(
+	cfg *config.Config,
+	authHandler *handler.AuthHandler,
+	planHandler *handler.PlanHandler,
+	wizardHandler *handler.WizardHandler,
+	paymentHandler *handler.PaymentHandler,
+	articleHandler *handler.ArticleHandler,
+	accountHandler *handler.AccountHandler,
+	healthHandler *handler.HealthHandler,
+	cryptoService *util.CryptoService,
+	rateLimiters *RateLimiters,
+) *chi.Mux {
 	router := chi.NewRouter()
 
-	// Middleware stack
+	// Middlewares globais
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
-	router.Use(middleware.Recoverer)
+	router.Use(authMiddleware.RecoveryMiddleware())
+	router.Use(authMiddleware.LoggerMiddleware())
 	router.Use(middleware.Compress(5))
-	
-	// Timeout middleware
 	router.Use(middleware.Timeout(60 * time.Second))
 
-	// CORS middleware
+	// Rate limit global: 1000 req/1min por IP
+	if rateLimiters != nil && rateLimiters.Global != nil {
+		router.Use(authMiddleware.RateLimitMiddleware(rateLimiters.Global, authMiddleware.IPIdentifier))
+	}
+
+	// Security Headers Middleware (spec 3.6)
+	router.Use(securityHeadersMiddleware(cfg.Environment == "production"))
+
+	// CORS
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.CORS.AllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
+		ExposedHeaders:   []string{"Link", "X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"},
 		AllowCredentials: cfg.CORS.AllowCredentials,
 		MaxAge:           cfg.CORS.MaxAge,
 	}))
 
-	// Request logger middleware
-	router.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			start := time.Now()
-			
-			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
-			next.ServeHTTP(ww, r)
-			
-			log.Info().
-				Str("method", r.Method).
-				Str("path", r.URL.Path).
-				Str("remote_addr", r.RemoteAddr).
-				Int("status", ww.Status()).
-				Int("bytes", ww.BytesWritten()).
-				Dur("duration", time.Since(start)).
-				Msg("HTTP Request")
-		})
-	})
+	// Health check
+	router.Get("/api/health", healthHandler.Check)
 
-	// Health check endpoint (no auth required)
-	router.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
-			"status": "healthy",
-			"timestamp": "` + time.Now().Format(time.RFC3339) + `",
-			"version": "1.0.0",
-			"dependencies": {
-				"database": "healthy",
-				"storage": "pending",
-				"queue": "pending",
-				"ai": "pending"
-			}
-		}`))
-	})
-
-	// API routes (will be implemented later)
+	// API routes
 	router.Route("/api", func(r chi.Router) {
-		// Auth routes
+		// Public plans endpoint
+		r.Get("/plans", planHandler.ListPlans)
+
+		// Auth (rotas públicas com rate limit específico: 5 req/15min por IP)
 		r.Route("/auth", func(r chi.Router) {
-			r.Post("/register", notImplementedHandler)
-			r.Post("/login", notImplementedHandler)
-			r.Post("/refresh", notImplementedHandler)
-			r.Post("/logout", notImplementedHandler)
-			r.Get("/me", notImplementedHandler)
+			if rateLimiters != nil && rateLimiters.Auth != nil {
+				r.Use(authMiddleware.RateLimitMiddleware(rateLimiters.Auth, authMiddleware.IPIdentifier))
+			}
+			r.Post("/register", authHandler.Register)
+			r.Post("/login", authHandler.Login)
+			r.Post("/refresh", authHandler.Refresh)
 		})
 
-		// Plans routes
-		r.Get("/plans", notImplementedHandler)
-
-		// Protected routes (require authentication)
+		// Protected routes
 		r.Group(func(r chi.Router) {
-			// TODO: Add auth middleware
-			// r.Use(authMiddleware)
+			r.Use(authMiddleware.AuthMiddleware(cryptoService))
 
-			// Payment routes
-			r.Route("/payments", func(r chi.Router) {
-				r.Post("/create-checkout", notImplementedHandler)
-				r.Get("/status/{sessionId}", notImplementedHandler)
-				r.Post("/create-portal-session", notImplementedHandler)
-			})
+			// Auth routes que requerem autenticação (spec 4.2)
+			r.Get("/auth/me", authHandler.GetMe)
+			r.Post("/auth/logout", authHandler.Logout)
 
-			// Wizard routes
+			// Wizard routes com rate limit específico: 10 req/1h por User
 			r.Route("/wizard", func(r chi.Router) {
-				r.Post("/business", notImplementedHandler)
-				r.Post("/competitors", notImplementedHandler)
-				r.Post("/integrations", notImplementedHandler)
-				r.Post("/generate-ideas", notImplementedHandler)
-				r.Get("/ideas-status/{jobId}", notImplementedHandler)
-				r.Post("/publish", notImplementedHandler)
+				r.Post("/business", wizardHandler.SaveBusiness)
+				r.Post("/competitors", wizardHandler.SaveCompetitors)
+				r.Post("/integrations", wizardHandler.SaveIntegrations)
+
+				// Rate limit específico para generate-ideas e publish
+				r.Group(func(r chi.Router) {
+					if rateLimiters != nil && rateLimiters.Wizard != nil {
+						r.Use(authMiddleware.RateLimitMiddleware(rateLimiters.Wizard, authMiddleware.UserIdentifier))
+					}
+					r.Post("/generate-ideas", wizardHandler.GenerateIdeas)
+					r.Post("/publish", wizardHandler.PublishArticles)
+				})
+
+				r.Get("/ideas-status/{jobId}", wizardHandler.GetIdeasStatus)
 			})
 
-			// Articles routes
+			// Payment routes (protegidas) - spec 4.4
+			r.Route("/payments", func(r chi.Router) {
+				r.Post("/create-checkout", paymentHandler.CreateCheckout)
+				r.Get("/status/{sessionId}", paymentHandler.GetStatus)
+				r.Post("/create-portal-session", paymentHandler.CreatePortalSession)
+			})
+
+			// Article routes (protegidas) com rate limit: 100 req/1min por User - spec 4.6
 			r.Route("/articles", func(r chi.Router) {
-				r.Get("/", notImplementedHandler)
-				r.Get("/{id}", notImplementedHandler)
-				r.Post("/{id}/republish", notImplementedHandler)
+				if rateLimiters != nil && rateLimiters.Articles != nil {
+					r.Use(authMiddleware.RateLimitMiddleware(rateLimiters.Articles, authMiddleware.UserIdentifier))
+				}
+				r.Get("/", articleHandler.ListArticles)
+				r.Get("/{id}", articleHandler.GetArticle)
+				r.Post("/{id}/republish", articleHandler.RepublishArticle)
 			})
 
-			// Account routes
+			// Account routes (protegidas) - spec 4.7
 			r.Route("/account", func(r chi.Router) {
-				r.Get("/", notImplementedHandler)
-				r.Patch("/profile", notImplementedHandler)
-				r.Patch("/integrations", notImplementedHandler)
-				r.Get("/plan", notImplementedHandler)
+				r.Get("/", accountHandler.GetAccount)
+				r.Patch("/profile", accountHandler.UpdateProfile)
+				r.Patch("/integrations", accountHandler.UpdateIntegrations)
+				r.Get("/plan", accountHandler.GetPlan)
 			})
 		})
 	})
 
-	// Webhook routes (special auth)
-	router.Post("/api/payments/webhook", notImplementedHandler)
-
-	// 404 handler
-	router.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"error":"not_found","message":"Endpoint not found"}`))
-	})
+	// Public webhook routes (SEM auth middleware)
+	router.Post("/webhooks/payments", paymentHandler.Webhook)
 
 	return router
 }
 
-func notImplementedHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNotImplemented)
-	w.Write([]byte(`{"error":"not_implemented","message":"This endpoint is not yet implemented"}`))
+// securityHeadersMiddleware adiciona headers de segurança conforme spec 3.6
+func securityHeadersMiddleware(isProduction bool) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Headers de segurança obrigatórios (spec 3.6)
+			w.Header().Set("X-Content-Type-Options", "nosniff")
+			w.Header().Set("X-Frame-Options", "DENY")
+			w.Header().Set("X-XSS-Protection", "1; mode=block")
+			w.Header().Set("Referrer-Policy", "origin-when-cross-origin")
+			w.Header().Set("Content-Security-Policy", "default-src 'self'")
+
+			// HSTS apenas em produção (requer HTTPS)
+			if isProduction {
+				w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }

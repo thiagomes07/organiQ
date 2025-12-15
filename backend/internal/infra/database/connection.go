@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/thiagomes07/organiQ/backend/config"
+	"organiq/config"
 )
 
 // Connect establishes a connection to the PostgreSQL database
