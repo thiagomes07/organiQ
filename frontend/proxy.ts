@@ -4,14 +4,30 @@ import type { NextRequest } from "next/server";
 const publicPaths = ["/", "/login"];
 const onboardingPaths = ["/app/planos", "/app/onboarding"];
 
+/**
+ * Decode JWT payload without verification (frontend-only validation)
+ * The actual signature verification happens on the backend
+ */
+function parseJWT(token: string): { hasCompletedOnboarding?: boolean } | null {
+  try {
+    const base64Payload = token.split('.')[1];
+    if (!base64Payload) return null;
+    
+    const payload = Buffer.from(base64Payload, 'base64').toString('utf-8');
+    return JSON.parse(payload);
+  } catch {
+    return null;
+  }
+}
+
 function matchesPath(pathname: string, paths: string[]): boolean {
   return paths.some(
     (path) => pathname === path || pathname.startsWith(path + "/")
   );
 }
 
-// MUDANÇA CRÍTICA: Exportar como "proxy" ao invés de "middleware"
-export async function proxy(request: NextRequest) {
+// Next.js 16: Exportar como "proxy" ao invés de "middleware"
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Permitir assets e API routes
@@ -19,6 +35,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/static") ||
+    pathname.startsWith("/fonts") ||
     pathname.includes(".")
   ) {
     return NextResponse.next();
@@ -31,24 +48,14 @@ export async function proxy(request: NextRequest) {
 
   // CASO 1: Rota pública
   if (isPublicPath) {
+    // Usuário autenticado tentando acessar login - redirecionar
     if (pathname === "/login" && token) {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-        const response = await fetch(`${apiUrl}/auth/me`, {
-          headers: {
-            Cookie: `accessToken=${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const { user } = await response.json();
-          const redirectTo = user.hasCompletedOnboarding
-            ? "/app/materias"
-            : "/app/planos";
-          return NextResponse.redirect(new URL(redirectTo, request.url));
-        }
-      } catch (error) {
-        console.error('Proxy auth check failed:', error);
+      const user = parseJWT(token);
+      if (user) {
+        const redirectTo = user.hasCompletedOnboarding
+          ? "/app/materias"
+          : "/app/planos";
+        return NextResponse.redirect(new URL(redirectTo, request.url));
       }
     }
     return NextResponse.next();
@@ -63,31 +70,26 @@ export async function proxy(request: NextRequest) {
 
   // CASO 3: Rota protegida com token
   if (isProtectedPath && token) {
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${apiUrl}/auth/me`, {
-        headers: {
-          Cookie: `accessToken=${token}`,
-        },
-      });
+    const user = parseJWT(token);
 
-      if (!response.ok) {
-        return NextResponse.redirect(new URL("/login", request.url));
-      }
+    if (!user) {
+      // Token inválido - redirecionar para login e limpar cookies
+      const response = NextResponse.redirect(new URL("/login", request.url));
+      response.cookies.delete("accessToken");
+      response.cookies.delete("refreshToken");
+      return response;
+    }
 
-      const { user } = await response.json();
-      const hasCompletedOnboarding = user.hasCompletedOnboarding ?? false;
+    const hasCompletedOnboarding = user.hasCompletedOnboarding ?? false;
 
-      if (!hasCompletedOnboarding && !isOnboardingPath) {
-        return NextResponse.redirect(new URL("/app/planos", request.url));
-      }
+    // Usuário não completou onboarding - restringir acesso
+    if (!hasCompletedOnboarding && !isOnboardingPath) {
+      return NextResponse.redirect(new URL("/app/planos", request.url));
+    }
 
-      if (hasCompletedOnboarding && isOnboardingPath) {
-        return NextResponse.redirect(new URL("/app/materias", request.url));
-      }
-    } catch (error) {
-      console.error('Proxy protected route check failed:', error);
-      return NextResponse.redirect(new URL("/login", request.url));
+    // Usuário completou onboarding mas tenta acessar páginas de onboarding
+    if (hasCompletedOnboarding && isOnboardingPath) {
+      return NextResponse.redirect(new URL("/app/materias", request.url));
     }
   }
 

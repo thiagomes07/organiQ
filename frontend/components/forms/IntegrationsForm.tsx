@@ -140,8 +140,8 @@ export function IntegrationsForm({
                         <DialogTitle>Como obter a senha de aplicativo?</DialogTitle>
                         <DialogDescription className="space-y-2 text-left">
                           <p>1. Acesse seu WordPress: <strong>Usuários → Perfil</strong></p>
-                          <p>2. Role até <strong>"Senhas de aplicativo"</strong></p>
-                          <p>3. Digite um nome (ex: "organiQ") e clique em <strong>"Adicionar"</strong></p>
+                          <p>2. Role até <strong>&ldquo;Senhas de aplicativo&rdquo;</strong></p>
+                          <p>3. Digite um nome (ex: &ldquo;organiQ&rdquo;) e clique em <strong>&ldquo;Adicionar&rdquo;</strong></p>
                           <p>4. Copie a senha gerada e cole aqui</p>
                           <p className="text-xs text-[var(--color-warning)] mt-4">
                             ⚠️ A senha só é exibida uma vez. Guarde-a em local seguro.

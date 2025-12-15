@@ -11,7 +11,6 @@ import {
   LayoutTemplate,
   Bot,
   Search,
-  PenTool,
 } from "lucide-react";
 import { Header } from "@/components/layouts/Header";
 import { Button } from "@/components/ui/button";
@@ -78,7 +77,7 @@ const AbstractDashboard = () => (
             </span>
           </div>
           <p className="text-[10px] text-gray-500 leading-tight">
-            Seu concorrente não fala sobre "Implantes em 1 dia". Vamos escrever
+            Seu concorrente não fala sobre &ldquo;Implantes em 1 dia&rdquo;. Vamos escrever
             sobre isso.
           </p>
         </div>
@@ -269,8 +268,8 @@ export default function LandingPage() {
               </CardHeader>
               <CardContent>
                 <CardDescription className="font-onest text-base">
-                  A IA sugere, você aprova. Adicione feedbacks como "Seja mais
-                  técnico" ou "Mencione o produto X" e o artigo será reescrito
+                  A IA sugere, você aprova. Adicione feedbacks como &ldquo;Seja mais
+                  técnico&rdquo; ou &ldquo;Mencione o produto X&rdquo; e o artigo será reescrito
                   antes de publicar.
                 </CardDescription>
               </CardContent>
@@ -379,7 +378,7 @@ export default function LandingPage() {
                       <span className="text-xs text-red-400">Rejeitado</span>
                     </div>
                     <div className="text-xs text-[var(--color-primary-purple)] font-bold mt-2">
-                      + Adicionar Feedback: "Focar em pagamento facilitado"
+                      + Adicionar Feedback: &ldquo;Focar em pagamento facilitado&rdquo;
                     </div>
                   </div>
                 </div>

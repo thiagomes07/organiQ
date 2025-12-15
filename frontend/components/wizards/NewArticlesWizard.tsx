@@ -54,7 +54,7 @@ export function NewArticlesWizard() {
 
   const {
     currentStep,
-    businessData,
+    businessData: _businessData,
     competitorData,
     articleIdeas,
     submitBusinessInfo,

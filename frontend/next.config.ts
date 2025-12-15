@@ -1,8 +1,9 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // --- REMOVIDO O OUTPUT STANDALONE ---
-  // O Amplify vai gerenciar o servidor automaticamente
+  // --- OUTPUT STANDALONE ---
+  // Otimiza o build para containers Docker (~150MB vs ~1GB)
+  output: 'standalone',
   
   // --- CONFIGURAÇÕES DE BUILD ---
   typescript: {

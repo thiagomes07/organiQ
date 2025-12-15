@@ -38,14 +38,14 @@ export interface BusinessUnit {
   id: string;
   name?: string;
   country: string;
-  state: string;
-  city: string;
+  state?: string;
+  city?: string;
 }
 
 export interface BusinessLocation {
   country: string;
-  state: string;
-  city: string;
+  state?: string;
+  city?: string;
   hasMultipleUnits: boolean;
   units?: BusinessUnit[];
 }

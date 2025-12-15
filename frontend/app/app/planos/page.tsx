@@ -4,7 +4,6 @@ import { Check } from 'lucide-react'
 import { usePlans } from '@/hooks/usePlans'
 import { PlanCard } from '@/components/plans/PlanCard'
 import { SkeletonCard } from '@/components/ui/skeleton'
-import { formatCurrency } from '@/lib/utils'
 
 export default function PlanosPage() {
   const { plans, selectPlan, isLoadingPlans, isCreatingCheckout, getRecommendedPlan } = usePlans()

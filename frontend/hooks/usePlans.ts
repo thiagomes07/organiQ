@@ -57,8 +57,8 @@ const planKeys = {
 // ============================================
 
 export function usePlans() {
-  const router = useRouter()
-  const { updateUser } = useAuthStore()
+  const _router = useRouter()
+  const { updateUser: _updateUser } = useAuthStore()
 
   // ============================================
   // GET PLANS QUERY

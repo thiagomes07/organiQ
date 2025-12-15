@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 interface LoadingSpinnerProps {
@@ -137,6 +138,3 @@ export function ButtonSpinner() {
     </svg>
   )
 }
-
-// Export do React para uso no LoadingOverlay
-import * as React from 'react'

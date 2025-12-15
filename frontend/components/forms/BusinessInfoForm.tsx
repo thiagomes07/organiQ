@@ -61,7 +61,7 @@ export function BusinessInfoForm({
   });
 
   const { fields, append, remove } = useFieldArray({
-    control: control as any,
+    control,
     name: "blogUrls",
   });
 
@@ -111,7 +111,7 @@ export function BusinessInfoForm({
           <Select
             value={watchPrimaryObjective}
             onValueChange={(value) =>
-              setValue("primaryObjective", value as any)
+              setValue("primaryObjective", value as "leads" | "sales" | "branding")
             }
           >
             <SelectTrigger error={errors.primaryObjective?.message}>
@@ -136,7 +136,7 @@ export function BusinessInfoForm({
             <Select
               value={watch("secondaryObjective") || ""}
               onValueChange={(value) =>
-                setValue("secondaryObjective", (value as any) || undefined)
+                setValue("secondaryObjective", value as "leads" | "sales" | "branding" | undefined)
               }
             >
               <SelectTrigger error={errors.secondaryObjective?.message}>

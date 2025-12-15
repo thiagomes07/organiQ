@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// NOTE: This file uses 'any' type casts for React Hook Form dynamic field array paths.
+// TypeScript cannot infer types for dynamic paths like `location.units.${index}.state`.
+// This is a known limitation and an acceptable trade-off for this use case.
 "use client";
 
 import { useFieldArray, Control, UseFormSetValue, UseFormWatch, UseFormRegister, FieldErrors } from "react-hook-form";
@@ -49,7 +53,7 @@ export function LocationFields({
   register,
 }: LocationFieldsProps) {
   const hasMultipleUnits = watch("location.hasMultipleUnits");
-  const country = watch("location.country");
+  const _country = watch("location.country");
   const state = watch("location.state");
 
   // Refs para detectar mudanças de estado

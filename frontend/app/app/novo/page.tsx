@@ -4,12 +4,13 @@ import { useWizard } from '@/hooks/useWizard'
 import { useUser } from '@/store/authStore'
 import { StepIndicator } from '@/components/wizards/StepIndicator'
 import { CompetitorsForm } from '@/components/forms/CompetitorsForm'
+import { ArticleIdeaCard } from '@/components/articles/ArticleIdeaCard'
 import { LoadingOverlay } from '@/components/shared/LoadingSpinner'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Label } from '@/components/ui/label'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, MessageSquare, FileCheck } from 'lucide-react'
 import Link from 'next/link'
 import type { CompetitorsInput } from '@/lib/validations'
 
@@ -26,18 +27,32 @@ const loadingMessages = [
   'Isso pode levar alguns minutos',
 ]
 
+const publishingMessages = [
+  'Escrevendo suas matérias com IA...',
+  'Otimizando conteúdo para SEO...',
+  'Publicando no WordPress...',
+  'Quase lá...',
+]
+
 export default function NovoPage() {
   const user = useUser()
+  
   const {
     currentStep,
-    businessData,
     competitorData,
-    submitBusinessInfo,
+    articleIdeas,
+    articleCount,
+    nextStep,
     submitCompetitors,
+    publishArticles,
+    updateArticleIdea,
+    setArticleCount,
     previousStep,
-    isSubmittingBusiness,
     isSubmittingCompetitors,
     isGeneratingIdeas,
+    isPublishing,
+    approvedCount,
+    canPublish,
   } = useWizard(false) // false = não é onboarding
 
   const articlesRemaining = user ? user.maxArticles - user.articlesUsed : 0
@@ -48,8 +63,102 @@ export default function NovoPage() {
     return <LoadingOverlay messages={loadingMessages} />
   }
 
-  // TODO: Implement step 3 (Approval) and step 1000 (Publishing)
-  // These will be added in the next phase
+  // Loading state para publicação
+  if (currentStep === 1000 || isPublishing) {
+    return <LoadingOverlay messages={publishingMessages} />
+  }
+
+  // Step 3: Approval
+  if (currentStep === 3) {
+    const feedbackCount = articleIdeas.filter((idea) => idea.feedback && idea.feedback.trim().length > 0).length
+
+    const handlePublish = () => {
+      const approvedArticles = articleIdeas
+        .filter((idea) => idea.approved)
+        .map((idea) => ({
+          id: idea.id,
+          feedback: idea.feedback || undefined,
+        }))
+
+      publishArticles({ articles: approvedArticles })
+    }
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold font-all-round text-[var(--color-primary-dark)]">
+            Aprove suas Matérias
+          </h1>
+          <p className="text-lg font-onest text-[var(--color-primary-dark)]/70">
+            Revise as ideias geradas e adicione direcionamentos se desejar
+          </p>
+        </div>
+
+        {/* Step Indicator */}
+        <StepIndicator currentStep={currentStep} steps={steps} />
+
+        {/* Articles Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {articleIdeas.map((idea) => (
+            <ArticleIdeaCard
+              key={idea.id}
+              idea={idea}
+              onUpdate={updateArticleIdea}
+            />
+          ))}
+        </div>
+
+        {/* Footer Actions */}
+        <Card>
+          <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
+            <div className="flex items-center gap-4 flex-wrap justify-center sm:justify-start">
+              <div className="flex items-center gap-2">
+                <FileCheck className="h-5 w-5 text-[var(--color-success)]" />
+                <span className="text-sm font-medium font-onest text-[var(--color-primary-dark)]">
+                  {approvedCount} matéria{approvedCount !== 1 ? 's' : ''} aprovada{approvedCount !== 1 ? 's' : ''}
+                </span>
+              </div>
+              {feedbackCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-[var(--color-primary-purple)]" />
+                  <span className="text-sm font-medium font-onest text-[var(--color-primary-dark)]/70">
+                    {feedbackCount} feedback{feedbackCount !== 1 ? 's' : ''} adicionado{feedbackCount !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={previousStep}
+              >
+                Voltar
+              </Button>
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={handlePublish}
+                disabled={!canPublish}
+                title={!canPublish ? 'Aprove pelo menos uma matéria' : undefined}
+                className="bg-[var(--color-primary-purple)] hover:bg-[var(--color-primary-purple)]/90"
+              >
+                Publicar {approvedCount} Matéria{approvedCount !== 1 ? 's' : ''}
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+
+        {/* Progress Info */}
+        <div className="text-center">
+          <p className="text-sm font-onest text-[var(--color-primary-dark)]/60">
+            Passo {currentStep} de {steps.length}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -109,35 +218,25 @@ export default function NovoPage() {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault()
-                    const articleCount = businessData?.articleCount || 1
-                    submitBusinessInfo({
-                      description: '', // Dados já existem do onboarding
-                      primaryObjective: 'leads', // Placeholder
-                      hasBlog: false,
-                      blogUrls: [],
-                      articleCount,
-                    } as any)
+                    nextStep()
                   }}
                   className="space-y-6"
                 >
                   {/* Slider */}
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     <Label required>Quantas matérias deseja criar?</Label>
                     <Slider
                       min={1}
                       max={articlesRemaining}
                       step={1}
-                      value={[businessData?.articleCount || 1]}
-                      onValueChange={(value) => {
-                        // Atualizar estado do wizard
-                        submitBusinessInfo({
-                          ...businessData,
-                          articleCount: value[0],
-                        } as any)
-                      }}
+                      value={[articleCount]}
+                      onValueChange={(value) => setArticleCount(value[0])}
                       showValue
                       formatValue={(value) => `${value} ${value === 1 ? 'matéria' : 'matérias'}`}
                     />
+                    <p className="text-center text-2xl font-bold font-all-round text-[var(--color-primary-purple)]">
+                      {articleCount} {articleCount === 1 ? 'matéria' : 'matérias'}
+                    </p>
                   </div>
 
                   {/* Info */}
@@ -153,8 +252,6 @@ export default function NovoPage() {
                       type="submit"
                       variant="secondary"
                       size="lg"
-                      isLoading={isSubmittingBusiness}
-                      disabled={isSubmittingBusiness}
                     >
                       Próximo
                     </Button>
@@ -165,7 +262,7 @@ export default function NovoPage() {
               {/* Step 2: Competitors */}
               {currentStep === 2 && (
                 <CompetitorsForm
-                  onSubmit={(data: CompetitorsInput) => submitCompetitors(data as any)}
+                  onSubmit={(data: CompetitorsInput) => submitCompetitors(data)}
                   onBack={previousStep}
                   isLoading={isSubmittingCompetitors}
                   defaultValues={competitorData || undefined}

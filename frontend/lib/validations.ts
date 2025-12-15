@@ -45,15 +45,15 @@ export const businessUnitSchema = z.object({
   id: z.string().uuid("ID inválido"),
   name: z.string().optional(),
   country: z.string().min(1, "País é obrigatório"),
-  state: z.string().min(1, "Estado é obrigatório"),
-  city: z.string().min(1, "Cidade é obrigatória"),
+  state: z.string().optional(),
+  city: z.string().optional(),
 });
 
 export const locationSchema = z
   .object({
     country: z.string().min(1, "País é obrigatório"),
-    state: z.string().min(1, "Estado é obrigatório"),
-    city: z.string().min(1, "Cidade é obrigatória"),
+    state: z.string().optional(),
+    city: z.string().optional(),
     hasMultipleUnits: z.boolean(),
     units: z.array(businessUnitSchema).optional(),
   })
@@ -79,19 +79,6 @@ export const locationSchema = z
     {
       message: "Máximo de 10 unidades",
       path: ["units"],
-    }
-  )
-  .refine(
-    (data) => {
-      // Se não tem múltiplas unidades, validar single location
-      if (!data.hasMultipleUnits) {
-        return data.state && data.city;
-      }
-      return true;
-    },
-    {
-      message: "Estado e cidade são obrigatórios",
-      path: ["state"],
     }
   );
 

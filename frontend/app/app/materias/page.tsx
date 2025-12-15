@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Copy, X } from 'lucide-react'
+import { Plus, Copy } from 'lucide-react'
 import { useArticles } from '@/hooks/useArticles'
 import { ArticleCard } from '@/components/articles/ArticleCard'
 import { ArticleTable } from '@/components/articles/ArticleTable'
@@ -29,7 +29,6 @@ export default function MateriasPage() {
     republishArticle,
     isRepublishing,
     hasActiveArticles,
-    refetch,
   } = useArticles({ status: statusFilter })
 
   const handleCopyContent = async () => {
@@ -75,7 +74,7 @@ export default function MateriasPage() {
       {!isEmpty && (
         <div className="flex items-center gap-4">
           <div className="w-full sm:w-48">
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ArticleStatus | 'all')}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

@@ -121,6 +121,7 @@ export function useWizard(isOnboarding: boolean = true) {
     useState<IntegrationsData | null>(null);
   const [articleIdeas, setArticleIdeas] = useState<ArticleIdea[]>([]);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [articleCount, setArticleCount] = useState(1);
 
   // ============================================
   // STEP 1: BUSINESS INFO
@@ -186,7 +187,7 @@ export function useWizard(isOnboarding: boolean = true) {
       ? wizardApi.generateIdeas
       : () =>
           wizardApi.generateNewIdeas({
-            articleCount: businessData?.articleCount || 1,
+            articleCount: articleCount,
             competitorUrls: competitorData?.competitorUrls,
           }),
     onSuccess: (data) => {
@@ -325,6 +326,7 @@ export function useWizard(isOnboarding: boolean = true) {
     competitorData,
     integrationsData,
     articleIdeas,
+    articleCount,
 
     // Navigation
     goToStep,
@@ -337,6 +339,7 @@ export function useWizard(isOnboarding: boolean = true) {
     submitIntegrations,
     publishArticles,
     updateArticleIdea,
+    setArticleCount,
 
     // Loading states
     isSubmittingBusiness: businessMutation.isPending,

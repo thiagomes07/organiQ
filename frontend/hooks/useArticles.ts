@@ -82,7 +82,7 @@ export function useArticles(filters: ArticleFilters = {}) {
 
   const republishMutation = useMutation({
     mutationFn: articlesApi.republishArticle,
-    onSuccess: (updatedArticle) => {
+    onSuccess: (_updatedArticle) => {
       // Atualizar cache
       queryClient.invalidateQueries({ queryKey: articleKeys.lists() })
       toast.success('Matéria reenviada para publicação!')

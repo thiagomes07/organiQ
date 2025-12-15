@@ -34,7 +34,7 @@ export function CompetitorsForm({
   });
 
   const { fields, append, remove } = useFieldArray({
-    control: control as any,
+    control,
     name: "competitorUrls",
   });
 

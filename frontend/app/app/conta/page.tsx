@@ -53,26 +53,26 @@ export default function ContaPage() {
   const watchSearchConsoleEnabled = integrationsForm.watch('searchConsole.enabled')
   const watchAnalyticsEnabled = integrationsForm.watch('analytics.enabled')
 
-  const handleUpdateProfile = async (data: ProfileUpdateInput) => {
+  const handleUpdateProfile = async (_data: ProfileUpdateInput) => {
     setIsSavingProfile(true)
     try {
       // TODO: Implement API call
       await new Promise(resolve => setTimeout(resolve, 1000))
       toast.success('Perfil atualizado com sucesso!')
-    } catch (error) {
+    } catch {
       toast.error('Erro ao atualizar perfil')
     } finally {
       setIsSavingProfile(false)
     }
   }
 
-  const handleUpdateIntegrations = async (data: IntegrationsUpdateInput) => {
+  const handleUpdateIntegrations = async (_data: IntegrationsUpdateInput) => {
     setIsSavingIntegrations(true)
     try {
       // TODO: Implement API call
       await new Promise(resolve => setTimeout(resolve, 1000))
       toast.success('Integrações atualizadas com sucesso!')
-    } catch (error) {
+    } catch {
       toast.error('Erro ao atualizar integrações')
     } finally {
       setIsSavingIntegrations(false)
@@ -272,7 +272,7 @@ export default function ContaPage() {
                               <DialogTitle>Como obter a senha?</DialogTitle>
                               <DialogDescription className="space-y-2 text-left">
                                 <p>1. WordPress → Usuários → Perfil</p>
-                                <p>2. Role até "Senhas de aplicativo"</p>
+                                <p>2. Role até &ldquo;Senhas de aplicativo&rdquo;</p>
                                 <p>3. Adicione uma nova senha</p>
                                 <p>4. Copie e cole aqui</p>
                               </DialogDescription>
