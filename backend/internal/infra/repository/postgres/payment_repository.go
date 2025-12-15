@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"organiq/internal/domain/entity"
+	"organiq/internal/domain/repository"
 )
 
 // PaymentRepositoryPostgres implementa PaymentRepository com PostgreSQL
@@ -17,7 +18,7 @@ type PaymentRepositoryPostgres struct {
 }
 
 // NewPaymentRepository cria nova instância
-func NewPaymentRepository(db *gorm.DB) *PaymentRepositoryPostgres {
+func NewPaymentRepository(db *gorm.DB) repository.PaymentRepository {
 	return &PaymentRepositoryPostgres{db: db}
 }
 

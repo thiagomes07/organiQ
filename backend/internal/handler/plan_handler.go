@@ -50,9 +50,7 @@ func (h *PlanHandler) ListPlans(w http.ResponseWriter, r *http.Request) {
 	responses := make([]PlanResponse, 0, len(plans))
 	for _, plan := range plans {
 		features := make([]string, len(plan.Features))
-		for idx, feature := range plan.Features {
-			features[idx] = feature
-		}
+		copy(features, plan.Features)
 
 		responses = append(responses, PlanResponse{
 			ID:          plan.ID.String(),

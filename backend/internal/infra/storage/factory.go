@@ -4,6 +4,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -62,17 +63,30 @@ func newMinIOStorage(cfg *config.Config) (StorageService, error) {
 		"", // publicURL (MinIO local não precisa)
 	)
 
-	// Health check
-	ctx, cancel := context.WithTimeout(context.Background(), 5*60) // 5 minutos timeout
-	defer cancel()
+	// Health check com retry (aguardar MinIO e bucket ficarem prontos)
+	maxRetries := 30
+	retryDelay := 2 * time.Second
 
-	if err := storage.HealthCheck(ctx); err != nil {
-		log.Error().Err(err).Msg("MinIO HealthCheck falhou")
-		return nil, err
+	for i := 0; i < maxRetries; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		err := storage.HealthCheck(ctx)
+		cancel()
+
+		if err == nil {
+			log.Info().Str("bucket", cfg.Storage.MinIOBucket).Msg("MinIO Storage inicializado com sucesso")
+			return storage, nil
+		}
+
+		log.Warn().
+			Err(err).
+			Int("attempt", i+1).
+			Int("max_retries", maxRetries).
+			Msg("MinIO HealthCheck falhou, aguardando...")
+
+		time.Sleep(retryDelay)
 	}
 
-	log.Info().Str("bucket", cfg.Storage.MinIOBucket).Msg("MinIO Storage inicializado com sucesso")
-	return storage, nil
+	return nil, fmt.Errorf("MinIO não ficou pronto após %d tentativas", maxRetries)
 }
 
 // newS3Storage cria cliente para AWS S3 (production)
@@ -102,7 +116,7 @@ func newS3Storage(cfg *config.Config) (StorageService, error) {
 	)
 
 	// Health check
-	ctx, cancel := context.WithTimeout(context.Background(), 5*60)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := storage.HealthCheck(ctx); err != nil {

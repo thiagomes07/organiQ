@@ -145,7 +145,7 @@ func RateLimitMiddleware(limiter *RateLimiter, identifierFn IdentifierFunc) func
 			w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(result.ResetAt.Unix(), 10))
 
 			if !result.Allowed {
-				retryAfter := int(result.ResetAt.Sub(time.Now()).Seconds())
+				retryAfter := int(time.Until(result.ResetAt).Seconds())
 				if retryAfter < 1 {
 					retryAfter = 1
 				}

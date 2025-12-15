@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -192,9 +193,9 @@ func (s *S3Storage) Exists(ctx context.Context, key string) (bool, error) {
 	})
 
 	if err != nil {
-		// Verificar se é erro 404 (not found)
+		// Verificar se é erro 404 (not found) usando errors.As
 		var apiErr smithy.APIError
-		if apiErr != nil && (apiErr.Error() == "NotFound" || strings.Contains(apiErr.Error(), "NoSuchKey") || strings.Contains(apiErr.Error(), "404")) {
+		if errors.As(err, &apiErr) && (apiErr.ErrorCode() == "NotFound" || apiErr.ErrorCode() == "NoSuchKey" || apiErr.ErrorCode() == "404") {
 			log.Debug().Str("key", key).Msg("S3Storage Exists: arquivo não encontrado")
 			return false, nil
 		}

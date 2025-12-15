@@ -58,9 +58,13 @@ services:
       postgres:
         condition: service_healthy
       minio:
-        condition: service_started # MinIO demora um pouco, started é mais seguro pra evitar timeout no boot
+        condition: service_healthy
+      minio-setup:
+        condition: service_completed_successfully
       localstack:
         condition: service_healthy
+      localstack-setup:
+        condition: service_completed_successfully
     networks:
       - organiq-network
     restart: on-failure # Reinicia se falhar, mas não se você parar manualmente
