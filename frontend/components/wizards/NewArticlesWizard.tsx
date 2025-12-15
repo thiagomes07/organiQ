@@ -57,17 +57,17 @@ export function NewArticlesWizard() {
     businessData: _businessData,
     competitorData,
     articleIdeas,
-    submitBusinessInfo,
     submitCompetitors,
     publishArticles,
     updateArticleIdea,
+    goToStep,
     previousStep,
-    isSubmittingBusiness,
     isSubmittingCompetitors,
     isGeneratingIdeas,
     isPublishing,
     approvedCount,
     canPublish,
+    setArticleCount: setWizardArticleCount,
   } = useWizard(false); // false = não é onboarding
 
   const [articleCount, setArticleCount] = useState(1);
@@ -96,13 +96,8 @@ export function NewArticlesWizard() {
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        submitBusinessInfo({
-          description: "", // Dados já existem do onboarding
-          primaryObjective: "leads",
-          hasBlog: false,
-          blogUrls: [],
-          articleCount,
-        } as any);
+        setWizardArticleCount(articleCount);
+        goToStep(2);
       }}
       className="space-y-6"
     >
@@ -164,8 +159,7 @@ export function NewArticlesWizard() {
               type="submit"
               variant="secondary"
               size="lg"
-              isLoading={isSubmittingBusiness}
-              disabled={isSubmittingBusiness}
+              disabled={false}
             >
               Próximo
             </Button>
@@ -181,7 +175,7 @@ export function NewArticlesWizard() {
 
   const renderStepCompetitors = () => (
     <CompetitorsForm
-      onSubmit={(data: CompetitorsInput) => submitCompetitors(data as any)}
+      onSubmit={(data: CompetitorsInput) => submitCompetitors(data)}
       onBack={previousStep}
       isLoading={isSubmittingCompetitors}
       defaultValues={competitorData || undefined}

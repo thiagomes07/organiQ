@@ -73,14 +73,27 @@ api.interceptors.response.use(
     return response
   },
   async (error: AxiosError<ApiErrorResponse>) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & {
-      _retry?: boolean
+    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined
+
+    // Se não temos config (erro inesperado), apenas propaga
+    if (!originalRequest) {
+      return Promise.reject(error)
     }
     
     // ============================================
     // HANDLE 401 - TOKEN EXPIRADO
     // ============================================
     
+    const requestUrl = String(originalRequest.url || '')
+
+    // Nunca tenta refresh recursivo na própria rota de refresh
+    if (error.response?.status === 401 && requestUrl.includes('/auth/refresh')) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login'
+      }
+      return Promise.reject(error)
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         // Se já está refreshing, adiciona à fila

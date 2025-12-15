@@ -5,11 +5,6 @@ const nextConfig: NextConfig = {
   // Otimiza o build para containers Docker (~150MB vs ~1GB)
   output: 'standalone',
   
-  // --- CONFIGURAÇÕES DE BUILD ---
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  
   // --- IMAGENS ---
   images: {
     remotePatterns: [

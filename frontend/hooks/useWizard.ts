@@ -1,16 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import api, { getErrorMessage } from "@/lib/axios";
 import { useAuthStore } from "@/store/authStore";
-import type {
-  BusinessInfo,
-  CompetitorData,
-  IntegrationsData,
-  ArticleIdea,
-  PublishPayload,
-} from "@/types";
+import type { ArticleIdea, PublishPayload } from "@/types";
+import type { BusinessInput, CompetitorsInput, IntegrationsInput } from "@/lib/validations";
 
 // ============================================
 // API FUNCTIONS
@@ -18,12 +13,13 @@ import type {
 
 const wizardApi = {
   // Onboarding completo
-  submitBusiness: async (data: BusinessInfo): Promise<{ success: boolean }> => {
+  submitBusiness: async (data: BusinessInput): Promise<{ success: boolean }> => {
     const formData = new FormData();
     formData.append("description", data.description);
     formData.append("primaryObjective", data.primaryObjective);
     if (data.secondaryObjective)
       formData.append("secondaryObjective", data.secondaryObjective);
+    formData.append("location", JSON.stringify(data.location));
     if (data.siteUrl) formData.append("siteUrl", data.siteUrl);
     formData.append("hasBlog", String(data.hasBlog));
     formData.append("blogUrls", JSON.stringify(data.blogUrls));
@@ -36,16 +32,12 @@ const wizardApi = {
     return response;
   },
 
-  submitCompetitors: async (
-    data: CompetitorData
-  ): Promise<{ success: boolean }> => {
+  submitCompetitors: async (data: CompetitorsInput): Promise<{ success: boolean }> => {
     const { data: response } = await api.post("/wizard/competitors", data);
     return response;
   },
 
-  submitIntegrations: async (
-    data: IntegrationsData
-  ): Promise<{ success: boolean }> => {
+  submitIntegrations: async (data: IntegrationsInput): Promise<{ success: boolean }> => {
     const { data: response } = await api.post("/wizard/integrations", data);
     return response;
   },
@@ -111,14 +103,18 @@ export function useWizard(isOnboarding: boolean = true) {
   const queryClient = useQueryClient();
   const { updateUser } = useAuthStore();
 
+  const ideasStartedAtRef = useRef<number | null>(null);
+  const publishStartedAtRef = useRef<number | null>(null);
+  const IDEAS_TIMEOUT_MS = 5 * 60 * 1000;
+  const PUBLISH_TIMEOUT_MS = 5 * 60 * 1000;
+
   // Local state para wizard steps
   const [currentStep, setCurrentStep] = useState(1);
-  const [businessData, setBusinessData] = useState<BusinessInfo | null>(null);
-  const [competitorData, setCompetitorData] = useState<CompetitorData | null>(
+  const [businessData, setBusinessData] = useState<BusinessInput | null>(null);
+  const [competitorData, setCompetitorData] = useState<CompetitorsInput | null>(
     null
   );
-  const [integrationsData, setIntegrationsData] =
-    useState<IntegrationsData | null>(null);
+  const [integrationsData, setIntegrationsData] = useState<IntegrationsInput | null>(null);
   const [articleIdeas, setArticleIdeas] = useState<ArticleIdea[]>([]);
   const [jobId, setJobId] = useState<string | null>(null);
   const [articleCount, setArticleCount] = useState(1);
@@ -150,7 +146,7 @@ export function useWizard(isOnboarding: boolean = true) {
       setCompetitorData(variables);
       setCurrentStep(isOnboarding ? 3 : 999); // Se não é onboarding, pula para loading
       if (!isOnboarding) {
-        generateIdeasMutation.mutate();
+        generateIdeasMutation.mutate({ competitorUrls: variables.competitorUrls });
       } else {
         toast.success("Concorrentes salvos!");
       }
@@ -170,7 +166,7 @@ export function useWizard(isOnboarding: boolean = true) {
     onSuccess: (_, variables) => {
       setIntegrationsData(variables);
       setCurrentStep(999); // Vai para loading
-      generateIdeasMutation.mutate();
+      generateIdeasMutation.mutate({ competitorUrls: competitorData?.competitorUrls });
     },
     onError: (error) => {
       const message = getErrorMessage(error);
@@ -183,16 +179,18 @@ export function useWizard(isOnboarding: boolean = true) {
   // ============================================
 
   const generateIdeasMutation = useMutation({
-    mutationFn: isOnboarding
-      ? wizardApi.generateIdeas
-      : () =>
-          wizardApi.generateNewIdeas({
-            articleCount: articleCount,
-            competitorUrls: competitorData?.competitorUrls,
-          }),
+    mutationFn: async (variables?: { competitorUrls?: string[] }) => {
+      if (isOnboarding) {
+        return wizardApi.generateIdeas();
+      }
+      return wizardApi.generateNewIdeas({
+        articleCount,
+        competitorUrls: variables?.competitorUrls,
+      });
+    },
     onSuccess: (data) => {
+      ideasStartedAtRef.current = Date.now();
       setJobId(data.jobId);
-      // O polling vai começar automaticamente via useQuery
     },
     onError: (error) => {
       const message = getErrorMessage(error);
@@ -210,6 +208,11 @@ export function useWizard(isOnboarding: boolean = true) {
     queryFn: () => wizardApi.getIdeasStatus(jobId!),
     enabled: !!jobId && currentStep === 999,
     refetchInterval: (query) => {
+      if (ideasStartedAtRef.current && Date.now() - ideasStartedAtRef.current > IDEAS_TIMEOUT_MS) {
+        toast.error("Tempo limite ao gerar ideias. Tente novamente.");
+        setCurrentStep(isOnboarding ? 3 : 2);
+        return false;
+      }
       if (query.state.data?.status === "completed") {
         setArticleIdeas(query.state.data.ideas || []);
         setCurrentStep(isOnboarding ? 4 : 3); // Vai para aprovação
@@ -234,6 +237,7 @@ export function useWizard(isOnboarding: boolean = true) {
       ? wizardApi.publishArticles
       : wizardApi.publishNewArticles,
     onSuccess: (data) => {
+      publishStartedAtRef.current = Date.now();
       setJobId(data.jobId);
       setCurrentStep(1000); // Loading de publicação
     },
@@ -252,6 +256,11 @@ export function useWizard(isOnboarding: boolean = true) {
     queryFn: () => wizardApi.getPublishStatus(jobId!),
     enabled: !!jobId && currentStep === 1000,
     refetchInterval: (query) => {
+      if (publishStartedAtRef.current && Date.now() - publishStartedAtRef.current > PUBLISH_TIMEOUT_MS) {
+        toast.error("Tempo limite ao publicar matérias. Tente novamente.");
+        setCurrentStep(isOnboarding ? 4 : 3);
+        return false;
+      }
       if (query.state.data?.status === "completed") {
         // Atualizar usuário
         if (isOnboarding) {
@@ -293,15 +302,22 @@ export function useWizard(isOnboarding: boolean = true) {
     setCurrentStep((prev) => Math.max(1, prev - 1));
   };
 
-  const submitBusinessInfo = (data: BusinessInfo) => {
+  const submitBusinessInfo = (data: BusinessInput) => {
     businessMutation.mutate(data);
   };
 
-  const submitCompetitors = (data: CompetitorData) => {
-    competitorsMutation.mutate(data);
+  const submitCompetitors = (data: CompetitorsInput) => {
+    if (isOnboarding) {
+      competitorsMutation.mutate(data);
+      return;
+    }
+
+    setCompetitorData(data);
+    setCurrentStep(999);
+    generateIdeasMutation.mutate({ competitorUrls: data.competitorUrls });
   };
 
-  const submitIntegrations = (data: IntegrationsData) => {
+  const submitIntegrations = (data: IntegrationsInput) => {
     integrationsMutation.mutate(data);
   };
 

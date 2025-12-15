@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { User } from '@/types'
+import api from '@/lib/axios'
 
 // ============================================
 // TYPES
@@ -17,6 +18,7 @@ interface AuthActions {
   updateUser: (updates: Partial<User>) => void
   clearUser: () => void
   setLoading: (loading: boolean) => void
+  logout: () => Promise<void>
 }
 
 type AuthStore = AuthState & AuthActions
@@ -72,7 +74,22 @@ export const useAuthStore = create<AuthStore>()(
        * Define estado de loading
        */
       setLoading: (loading) =>
-        set({ isLoading: loading })
+        set({ isLoading: loading }),
+
+      /**
+       * Faz logout (API) e limpa estado local
+       */
+      logout: async () => {
+        try {
+          await api.post('/auth/logout')
+        } finally {
+          set({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false
+          })
+        }
+      }
     }),
     {
       name: 'organiq-auth', // Nome da chave no localStorage

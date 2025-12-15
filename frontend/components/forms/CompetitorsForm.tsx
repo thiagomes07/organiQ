@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, X } from "lucide-react";
 import { competitorsSchema, type CompetitorsInput } from "@/lib/validations";
@@ -24,7 +24,8 @@ export function CompetitorsForm({
   const {
     register,
     handleSubmit,
-    control,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<CompetitorsInput>({
     resolver: zodResolver(competitorsSchema),
@@ -33,10 +34,7 @@ export function CompetitorsForm({
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "competitorUrls",
-  });
+  const competitorUrls = watch("competitorUrls") ?? [];
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -53,7 +51,7 @@ export function CompetitorsForm({
 
       {/* Lista de URLs */}
       <div className="space-y-3">
-        {fields.length === 0 ? (
+        {competitorUrls.length === 0 ? (
           <div className="text-center py-8 px-4 border-2 border-dashed border-[var(--color-border)] rounded-[var(--radius-md)]">
             <p className="text-sm font-onest text-[var(--color-primary-dark)]/60 mb-4">
               Nenhum concorrente adicionado ainda
@@ -62,7 +60,7 @@ export function CompetitorsForm({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append("")}
+              onClick={() => setValue("competitorUrls", [""])}
             >
               <Plus className="h-4 w-4 mr-2" />
               Adicionar primeiro concorrente
@@ -70,8 +68,8 @@ export function CompetitorsForm({
           </div>
         ) : (
           <>
-            {fields.map((field, index) => (
-              <div key={field.id} className="space-y-2">
+            {competitorUrls.map((_, index) => (
+              <div key={index} className="space-y-2">
                 <div className="flex items-start gap-2">
                   <div className="flex-1">
                     <Label htmlFor={`competitor-${index}`}>
@@ -89,7 +87,12 @@ export function CompetitorsForm({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        onClick={() => remove(index)}
+                        onClick={() =>
+                          setValue(
+                            "competitorUrls",
+                            competitorUrls.filter((__, i) => i !== index)
+                          )
+                        }
                         className="flex-shrink-0"
                       >
                         <X className="h-4 w-4" />
@@ -101,20 +104,20 @@ export function CompetitorsForm({
             ))}
 
             {/* Add More Button */}
-            {fields.length < 10 && (
+            {competitorUrls.length < 10 && (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => append("")}
+                onClick={() => setValue("competitorUrls", [...competitorUrls, ""])}
                 className="w-full"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Adicionar concorrente ({fields.length}/10)
+                Adicionar concorrente ({competitorUrls.length}/10)
               </Button>
             )}
 
-            {fields.length >= 10 && (
+            {competitorUrls.length >= 10 && (
               <p className="text-xs text-[var(--color-warning)] font-onest text-center">
                 Limite de 10 concorrentes atingido
               </p>
@@ -150,7 +153,7 @@ export function CompetitorsForm({
           isLoading={isLoading}
           disabled={isLoading}
         >
-          {fields.length === 0 ? "Pular esta etapa" : "Próximo"}
+          {competitorUrls.length === 0 ? "Pular esta etapa" : "Próximo"}
         </Button>
       </div>
     </form>

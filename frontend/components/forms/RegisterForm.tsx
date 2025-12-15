@@ -74,19 +74,6 @@ export function RegisterForm() {
         <PasswordStrengthIndicator password={password} />
       </div>
 
-      {/* Confirmação de Senha */}
-      <div className="space-y-2">
-        <Label htmlFor="register-confirmPassword" required>
-          Confirmar senha
-        </Label>
-        <PasswordInput
-          id="register-confirmPassword"
-          placeholder="••••••••"
-          error={errors.confirmPassword?.message}
-          {...register("confirmPassword")}
-        />
-      </div>
-
       {/* Disclaimer de Segurança */}
       <div className="bg-[var(--color-primary-purple)]/5 border border-[var(--color-primary-purple)]/20 rounded-[var(--radius-sm)] p-3">
         <p className="text-xs font-onest text-[var(--color-primary-dark)]/70">

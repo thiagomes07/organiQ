@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, X, Upload } from "lucide-react";
 import { businessSchema, type BusinessInput } from "@/lib/validations";
@@ -50,7 +50,7 @@ export function BusinessInfoForm({
       blogUrls: [],
       articleCount: 1,
       location: {
-        country: "Brasil",
+        country: "",
         state: "",
         city: "",
         hasMultipleUnits: false,
@@ -60,14 +60,10 @@ export function BusinessInfoForm({
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "blogUrls",
-  });
-
   const watchPrimaryObjective = watch("primaryObjective");
   const watchHasBlog = watch("hasBlog");
   const watchArticleCount = watch("articleCount");
+  const blogUrls = watch("blogUrls") ?? [];
 
   const availableSecondaryObjectives = OBJECTIVES.filter(
     (obj) => obj.value !== watchPrimaryObjective
@@ -200,8 +196,8 @@ export function BusinessInfoForm({
         <div className="space-y-2">
           <Label>URLs do blog</Label>
           <div className="space-y-2">
-            {fields.map((field, index) => (
-              <div key={field.id} className="flex gap-2">
+            {blogUrls.map((_, index) => (
+              <div key={index} className="flex gap-2">
                 <Input
                   type="url"
                   placeholder="https://seusite.com.br/blog"
@@ -212,7 +208,12 @@ export function BusinessInfoForm({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  onClick={() => remove(index)}
+                  onClick={() =>
+                    setValue(
+                      "blogUrls",
+                      blogUrls.filter((__, i) => i !== index)
+                    )
+                  }
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -222,7 +223,7 @@ export function BusinessInfoForm({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append("")}
+              onClick={() => setValue("blogUrls", [...blogUrls, ""])}
             >
               <Plus className="h-4 w-4 mr-2" />
               Adicionar URL

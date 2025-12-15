@@ -186,7 +186,7 @@ export function OnboardingWizard() {
           {/* Step 1: Business Info */}
           {currentStep === 1 && (
             <BusinessInfoForm
-              onSubmit={(data: BusinessInput) => submitBusinessInfo(data as any)}
+              onSubmit={(data: BusinessInput) => submitBusinessInfo(data)}
               isLoading={isSubmittingBusiness}
               defaultValues={businessData || undefined}
             />
@@ -195,7 +195,7 @@ export function OnboardingWizard() {
           {/* Step 2: Competitors */}
           {currentStep === 2 && (
             <CompetitorsForm
-              onSubmit={(data: CompetitorsInput) => submitCompetitors(data as any)}
+              onSubmit={(data: CompetitorsInput) => submitCompetitors(data)}
               onBack={previousStep}
               isLoading={isSubmittingCompetitors}
               defaultValues={competitorData || undefined}
@@ -205,7 +205,7 @@ export function OnboardingWizard() {
           {/* Step 3: Integrations */}
           {currentStep === 3 && (
             <IntegrationsForm
-              onSubmit={(data: IntegrationsInput) => submitIntegrations(data as any)}
+              onSubmit={(data: IntegrationsInput) => submitIntegrations(data)}
               onBack={previousStep}
               isLoading={isSubmittingIntegrations}
               defaultValues={integrationsData || undefined}
