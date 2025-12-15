@@ -138,39 +138,43 @@ func RespondTooManyRequests(w http.ResponseWriter, retryAfter string) {
 // ============================================
 
 // SetAccessTokenCookie configura cookie de access token
-func SetAccessTokenCookie(w http.ResponseWriter, token string) {
+// O parâmetro secure deve ser true em produção (HTTPS)
+func SetAccessTokenCookie(w http.ResponseWriter, token string, secure bool) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "accessToken",
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false, // true em produção (HTTPS)
+		Secure:   secure,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   15 * 60, // 15 minutos
 	})
 }
 
 // SetRefreshTokenCookie configura cookie de refresh token
-func SetRefreshTokenCookie(w http.ResponseWriter, token string) {
+// O parâmetro secure deve ser true em produção (HTTPS)
+// Path "/api/auth" permite acesso em refresh e logout
+func SetRefreshTokenCookie(w http.ResponseWriter, token string, secure bool) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refreshToken",
 		Value:    token,
-		Path:     "/api/auth/refresh",
+		Path:     "/api/auth", // Escopo permite refresh e logout
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   secure,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   7 * 24 * 60 * 60, // 7 dias
 	})
 }
 
 // ClearAuthCookies limpa cookies de autenticação
-func ClearAuthCookies(w http.ResponseWriter) {
+// O parâmetro secure deve corresponder ao usado na criação dos cookies
+func ClearAuthCookies(w http.ResponseWriter, secure bool) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "accessToken",
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   secure,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   -1,
 	})
@@ -178,9 +182,9 @@ func ClearAuthCookies(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refreshToken",
 		Value:    "",
-		Path:     "/api/auth/refresh",
+		Path:     "/api/auth", // Mesmo path de criação
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   secure,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   -1,
 	})

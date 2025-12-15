@@ -11,15 +11,20 @@ import (
 
 // User representa a entidade de usuário no domínio
 type User struct {
-	ID                     uuid.UUID
-	Name                   string
-	Email                  string
-	PasswordHash           string
-	PlanID                 uuid.UUID
-	ArticlesUsed           int
-	HasCompletedOnboarding bool
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
+	ID                     uuid.UUID `gorm:"primaryKey" json:"id"`
+	Name                   string    `gorm:"column:name" json:"name"`
+	Email                  string    `gorm:"uniqueIndex;column:email" json:"email"`
+	PasswordHash           string    `gorm:"column:password_hash" json:"-"`
+	PlanID                 uuid.UUID `gorm:"index;column:plan_id" json:"planId"`
+	ArticlesUsed           int       `gorm:"column:articles_used" json:"articlesUsed"`
+	HasCompletedOnboarding bool      `gorm:"column:has_completed_onboarding" json:"hasCompletedOnboarding"`
+	CreatedAt              time.Time `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt              time.Time `gorm:"column:updated_at" json:"updatedAt"`
+}
+
+// TableName especifica o nome da tabela
+func (User) TableName() string {
+	return "users"
 }
 
 // Validate valida as regras de negócio da entidade User
@@ -98,12 +103,17 @@ func isValidEmail(email string) bool {
 
 // RefreshToken representa um token de refresh armazenado
 type RefreshToken struct {
-	ID         uuid.UUID
-	UserID     uuid.UUID
-	TokenHash  string // Hash SHA-256 do token
-	ExpiresAt  time.Time
-	LastUsedAt *time.Time
-	CreatedAt  time.Time
+	ID         uuid.UUID  `gorm:"primaryKey" json:"id"`
+	UserID     uuid.UUID  `gorm:"index;column:user_id" json:"userId"`
+	TokenHash  string     `gorm:"uniqueIndex;column:token_hash" json:"-"`
+	ExpiresAt  time.Time  `gorm:"index;column:expires_at" json:"expiresAt"`
+	LastUsedAt *time.Time `gorm:"column:last_used_at" json:"lastUsedAt"`
+	CreatedAt  time.Time  `gorm:"column:created_at" json:"createdAt"`
+}
+
+// TableName especifica o nome da tabela
+func (RefreshToken) TableName() string {
+	return "refresh_tokens"
 }
 
 // IsExpired verifica se o token expirou
