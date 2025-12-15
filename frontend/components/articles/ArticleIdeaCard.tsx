@@ -1,44 +1,65 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Check, X, MessageSquare } from 'lucide-react'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
-import { debounce } from '@/lib/utils'
-import type { ArticleIdea } from '@/types'
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Check, X, MessageSquare } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import type { ArticleIdea } from "@/types";
 
 interface ArticleIdeaCardProps {
-  idea: ArticleIdea
-  onUpdate: (id: string, updates: Partial<ArticleIdea>) => void
+  idea: ArticleIdea;
+  onUpdate: (id: string, updates: Partial<ArticleIdea>) => void;
 }
 
 export function ArticleIdeaCard({ idea, onUpdate }: ArticleIdeaCardProps) {
-  const [localFeedback, setLocalFeedback] = useState(idea.feedback || '')
+  const [localFeedback, setLocalFeedback] = useState(idea.feedback || "");
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedRef = useRef(idea.feedback || "");
+
+  // Memoize onUpdate to prevent infinite loops
+  const handleFeedbackUpdate = useCallback(
+    (feedback: string) => {
+      if (feedback !== lastSavedRef.current) {
+        lastSavedRef.current = feedback;
+        onUpdate(idea.id, { feedback });
+      }
+    },
+    [idea.id, onUpdate]
+  );
 
   // Debounced update para feedback
   useEffect(() => {
-    const debouncedUpdate = debounce(() => {
-      if (localFeedback !== idea.feedback) {
-        onUpdate(idea.id, { feedback: localFeedback })
-      }
-    }, 1000)
+    // Clear existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
 
-    debouncedUpdate()
-  }, [localFeedback, idea.id, idea.feedback, onUpdate])
+    // Set new timeout
+    timeoutRef.current = setTimeout(() => {
+      handleFeedbackUpdate(localFeedback);
+    }, 1000);
+
+    // Cleanup
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [localFeedback, handleFeedbackUpdate]);
 
   const handleToggleApprove = (approved: boolean) => {
-    onUpdate(idea.id, { approved })
-  }
+    onUpdate(idea.id, { approved });
+  };
 
   return (
     <Card
       className={cn(
-        'transition-all duration-200',
-        idea.approved && 'border-l-4 border-l-[var(--color-success)]',
-        !idea.approved && 'opacity-60'
+        "transition-all duration-200",
+        idea.approved && "border-l-4 border-l-[var(--color-success)]",
+        !idea.approved && "opacity-60"
       )}
     >
       <CardHeader>
@@ -64,24 +85,25 @@ export function ArticleIdeaCard({ idea, onUpdate }: ArticleIdeaCardProps) {
         {/* Toggle Buttons */}
         <div className="flex gap-2">
           <Button
-            variant={idea.approved ? 'success' : 'outline'}
+            variant={idea.approved ? "success" : "outline"}
             size="sm"
             onClick={() => handleToggleApprove(true)}
             className={cn(
-              'flex-1',
-              idea.approved && 'bg-[var(--color-success)] text-white hover:bg-[var(--color-success)]/90'
+              "flex-1",
+              idea.approved &&
+                "bg-[var(--color-success)] text-white hover:bg-[var(--color-success)]/90"
             )}
           >
             <Check className="h-4 w-4 mr-2" />
             Aprovar
           </Button>
           <Button
-            variant={!idea.approved ? 'outline' : 'ghost'}
+            variant={!idea.approved ? "outline" : "ghost"}
             size="sm"
             onClick={() => handleToggleApprove(false)}
             className={cn(
-              'flex-1',
-              !idea.approved && 'border-[var(--color-primary-dark)]/20'
+              "flex-1",
+              !idea.approved && "border-[var(--color-primary-dark)]/20"
             )}
           >
             <X className="h-4 w-4 mr-2" />
@@ -123,5 +145,5 @@ export function ArticleIdeaCard({ idea, onUpdate }: ArticleIdeaCardProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

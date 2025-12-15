@@ -1,45 +1,73 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { HelpCircle, Check, Calendar } from 'lucide-react'
-import * as Accordion from '@radix-ui/react-accordion'
-import { profileUpdateSchema, integrationsUpdateSchema, type ProfileUpdateInput, type IntegrationsUpdateInput } from '@/lib/validations'
-import { usePlans } from '@/hooks/usePlans'
-import { useUser } from '@/store/authStore'
-import { formatDate, formatCurrency } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { HelpCircle, Check, Calendar } from "lucide-react";
+import * as Accordion from "@radix-ui/react-accordion";
+import {
+  profileUpdateSchema,
+  integrationsUpdateSchema,
+  type ProfileUpdateInput,
+  type IntegrationsUpdateInput,
+} from "@/lib/validations";
+import { usePlans } from "@/hooks/usePlans";
+import { useUser, useAuthStore } from "@/store/authStore";
+import { formatDate, formatCurrency } from "@/lib/utils";
+import api, { getErrorMessage } from "@/lib/axios";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export default function ContaPage() {
-  const user = useUser()
-  const { currentPlan, openPortal, isOpeningPortal } = usePlans()
-  const [isSavingProfile, setIsSavingProfile] = useState(false)
-  const [isSavingIntegrations, setIsSavingIntegrations] = useState(false)
+  const user = useUser();
+  const { updateUser } = useAuthStore();
+  const { currentPlan, openPortal, isOpeningPortal } = usePlans();
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingIntegrations, setIsSavingIntegrations] = useState(false);
 
   // Profile Form
   const profileForm = useForm<ProfileUpdateInput>({
     resolver: zodResolver(profileUpdateSchema),
     defaultValues: {
-      name: user?.name || '',
+      name: user?.name || "",
     },
-  })
+  });
+
+  // Update form when user changes
+  useEffect(() => {
+    if (user?.name) {
+      profileForm.setValue("name", user.name);
+    }
+  }, [user?.name, profileForm]);
 
   // Integrations Form
   const integrationsForm = useForm<IntegrationsUpdateInput>({
     resolver: zodResolver(integrationsUpdateSchema),
     defaultValues: {
       wordpress: {
-        siteUrl: '',
-        username: '',
-        appPassword: '',
+        siteUrl: "",
+        username: "",
+        appPassword: "",
       },
       searchConsole: {
         enabled: false,
@@ -48,38 +76,43 @@ export default function ContaPage() {
         enabled: false,
       },
     },
-  })
+  });
 
-  const watchSearchConsoleEnabled = integrationsForm.watch('searchConsole.enabled')
-  const watchAnalyticsEnabled = integrationsForm.watch('analytics.enabled')
+  const watchSearchConsoleEnabled = integrationsForm.watch(
+    "searchConsole.enabled"
+  );
+  const watchAnalyticsEnabled = integrationsForm.watch("analytics.enabled");
 
-  const handleUpdateProfile = async (_data: ProfileUpdateInput) => {
-    setIsSavingProfile(true)
+  const handleUpdateProfile = async (data: ProfileUpdateInput) => {
+    setIsSavingProfile(true);
     try {
-      // TODO: Implement API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      toast.success('Perfil atualizado com sucesso!')
-    } catch {
-      toast.error('Erro ao atualizar perfil')
+      await api.patch("/account/profile", data);
+      updateUser({ name: data.name });
+      toast.success("Perfil atualizado com sucesso!");
+    } catch (error) {
+      const message = getErrorMessage(error);
+      toast.error(message || "Erro ao atualizar perfil");
     } finally {
-      setIsSavingProfile(false)
+      setIsSavingProfile(false);
     }
-  }
+  };
 
-  const handleUpdateIntegrations = async (_data: IntegrationsUpdateInput) => {
-    setIsSavingIntegrations(true)
+  const handleUpdateIntegrations = async (data: IntegrationsUpdateInput) => {
+    setIsSavingIntegrations(true);
     try {
-      // TODO: Implement API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      toast.success('Integrações atualizadas com sucesso!')
-    } catch {
-      toast.error('Erro ao atualizar integrações')
+      await api.patch("/account/integrations", data);
+      toast.success("Integrações atualizadas com sucesso!");
+    } catch (error) {
+      const message = getErrorMessage(error);
+      toast.error(message || "Erro ao atualizar integrações");
     } finally {
-      setIsSavingIntegrations(false)
+      setIsSavingIntegrations(false);
     }
-  }
+  };
 
-  const usagePercentage = user ? (user.articlesUsed / user.maxArticles) * 100 : 0
+  const usagePercentage = user
+    ? (user.articlesUsed / user.maxArticles) * 100
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -112,7 +145,7 @@ export default function ContaPage() {
                   id="name"
                   type="text"
                   error={profileForm.formState.errors.name?.message}
-                  {...profileForm.register('name')}
+                  {...profileForm.register("name")}
                 />
               </div>
 
@@ -122,7 +155,7 @@ export default function ContaPage() {
                 <Input
                   id="email"
                   type="email"
-                  value={user?.email || ''}
+                  value={user?.email || ""}
                   disabled
                 />
                 <p className="text-xs text-[var(--color-primary-dark)]/60 font-onest">
@@ -174,7 +207,8 @@ export default function ContaPage() {
               </div>
               <Progress value={usagePercentage} showLabel />
               <p className="text-xs text-[var(--color-primary-dark)]/60 font-onest">
-                {user && user.maxArticles - user.articlesUsed} matérias restantes este mês
+                {user && user.maxArticles - user.articlesUsed} matérias
+                restantes este mês
               </p>
             </div>
 
@@ -198,9 +232,7 @@ export default function ContaPage() {
             >
               Gerenciar Assinatura
             </Button>
-            <Button variant="primary">
-              Fazer Upgrade
-            </Button>
+            <Button variant="primary">Fazer Upgrade</Button>
           </CardFooter>
         </Card>
       </div>
@@ -209,10 +241,14 @@ export default function ContaPage() {
       <Card>
         <CardHeader>
           <CardTitle>Integrações</CardTitle>
-          <CardDescription>Configure suas conexões com WordPress e Google</CardDescription>
+          <CardDescription>
+            Configure suas conexões com WordPress e Google
+          </CardDescription>
         </CardHeader>
 
-        <form onSubmit={integrationsForm.handleSubmit(handleUpdateIntegrations)}>
+        <form
+          onSubmit={integrationsForm.handleSubmit(handleUpdateIntegrations)}
+        >
           <CardContent>
             <Accordion.Root type="multiple" className="space-y-4">
               {/* WordPress */}
@@ -244,7 +280,7 @@ export default function ContaPage() {
                         id="wp-siteUrl"
                         type="url"
                         placeholder="https://seusite.com.br"
-                        {...integrationsForm.register('wordpress.siteUrl')}
+                        {...integrationsForm.register("wordpress.siteUrl")}
                       />
                     </div>
 
@@ -254,16 +290,21 @@ export default function ContaPage() {
                         id="wp-username"
                         type="text"
                         placeholder="seu_usuario"
-                        {...integrationsForm.register('wordpress.username')}
+                        {...integrationsForm.register("wordpress.username")}
                       />
                     </div>
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label htmlFor="wp-appPassword">Senha de aplicativo</Label>
+                        <Label htmlFor="wp-appPassword">
+                          Senha de aplicativo
+                        </Label>
                         <Dialog>
                           <DialogTrigger asChild>
-                            <button type="button" className="text-[var(--color-primary-teal)] hover:text-[var(--color-primary-purple)]">
+                            <button
+                              type="button"
+                              className="text-[var(--color-primary-teal)] hover:text-[var(--color-primary-purple)]"
+                            >
                               <HelpCircle className="h-4 w-4" />
                             </button>
                           </DialogTrigger>
@@ -272,7 +313,9 @@ export default function ContaPage() {
                               <DialogTitle>Como obter a senha?</DialogTitle>
                               <DialogDescription className="space-y-2 text-left">
                                 <p>1. WordPress → Usuários → Perfil</p>
-                                <p>2. Role até &ldquo;Senhas de aplicativo&rdquo;</p>
+                                <p>
+                                  2. Role até &ldquo;Senhas de aplicativo&rdquo;
+                                </p>
                                 <p>3. Adicione uma nova senha</p>
                                 <p>4. Copie e cole aqui</p>
                               </DialogDescription>
@@ -284,7 +327,7 @@ export default function ContaPage() {
                         id="wp-appPassword"
                         type="password"
                         placeholder="••••••••••••"
-                        {...integrationsForm.register('wordpress.appPassword')}
+                        {...integrationsForm.register("wordpress.appPassword")}
                       />
                     </div>
                   </Accordion.Content>
@@ -293,10 +336,14 @@ export default function ContaPage() {
 
               {/* Google Search Console */}
               <Accordion.Item value="searchConsole">
-                <div className={cn(
-                  "border-2 rounded-[var(--radius-md)] overflow-hidden",
-                  watchSearchConsoleEnabled ? "border-[var(--color-primary-teal)]" : "border-[var(--color-border)]"
-                )}>
+                <div
+                  className={cn(
+                    "border-2 rounded-[var(--radius-md)] overflow-hidden",
+                    watchSearchConsoleEnabled
+                      ? "border-[var(--color-primary-teal)]"
+                      : "border-[var(--color-border)]"
+                  )}
+                >
                   <Accordion.Header>
                     <Accordion.Trigger className="flex items-center justify-between w-full p-4 hover:bg-[var(--color-primary-teal)]/5">
                       <div className="flex items-center gap-3">
@@ -313,10 +360,14 @@ export default function ContaPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {watchSearchConsoleEnabled && <Check className="h-5 w-5 text-[var(--color-success)]" />}
+                        {watchSearchConsoleEnabled && (
+                          <Check className="h-5 w-5 text-[var(--color-success)]" />
+                        )}
                         <input
                           type="checkbox"
-                          {...integrationsForm.register('searchConsole.enabled')}
+                          {...integrationsForm.register(
+                            "searchConsole.enabled"
+                          )}
                           onClick={(e) => e.stopPropagation()}
                           className="h-4 w-4 rounded"
                         />
@@ -329,7 +380,9 @@ export default function ContaPage() {
                       <Input
                         type="url"
                         placeholder="https://seusite.com.br"
-                        {...integrationsForm.register('searchConsole.propertyUrl')}
+                        {...integrationsForm.register(
+                          "searchConsole.propertyUrl"
+                        )}
                       />
                     </Accordion.Content>
                   )}
@@ -338,10 +391,14 @@ export default function ContaPage() {
 
               {/* Google Analytics */}
               <Accordion.Item value="analytics">
-                <div className={cn(
-                  "border-2 rounded-[var(--radius-md)] overflow-hidden",
-                  watchAnalyticsEnabled ? "border-[var(--color-primary-teal)]" : "border-[var(--color-border)]"
-                )}>
+                <div
+                  className={cn(
+                    "border-2 rounded-[var(--radius-md)] overflow-hidden",
+                    watchAnalyticsEnabled
+                      ? "border-[var(--color-primary-teal)]"
+                      : "border-[var(--color-border)]"
+                  )}
+                >
                   <Accordion.Header>
                     <Accordion.Trigger className="flex items-center justify-between w-full p-4 hover:bg-[var(--color-primary-teal)]/5">
                       <div className="flex items-center gap-3">
@@ -358,10 +415,12 @@ export default function ContaPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {watchAnalyticsEnabled && <Check className="h-5 w-5 text-[var(--color-success)]" />}
+                        {watchAnalyticsEnabled && (
+                          <Check className="h-5 w-5 text-[var(--color-success)]" />
+                        )}
                         <input
                           type="checkbox"
-                          {...integrationsForm.register('analytics.enabled')}
+                          {...integrationsForm.register("analytics.enabled")}
                           onClick={(e) => e.stopPropagation()}
                           className="h-4 w-4 rounded"
                         />
@@ -374,7 +433,9 @@ export default function ContaPage() {
                       <Input
                         type="text"
                         placeholder="G-XXXXXXXXXX"
-                        {...integrationsForm.register('analytics.measurementId')}
+                        {...integrationsForm.register(
+                          "analytics.measurementId"
+                        )}
                       />
                     </Accordion.Content>
                   )}
@@ -396,5 +457,5 @@ export default function ContaPage() {
         </form>
       </Card>
     </div>
-  )
+  );
 }

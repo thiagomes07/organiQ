@@ -33,9 +33,9 @@ import type { BusinessInput } from "@/lib/validations";
 
 /**
  * ESTRUTURA DE DADOS:
- * 
+ *
  * const BRAZIL_STATES: string[] = ["AC", "AL", "AP", ...]
- * 
+ *
  * const cidadesPorEstado: Record<string, string[]> = {
  *   "AC": ["Acrelândia", "Assis Brasil", ...],
  *   "AL": ["Anadia", "Arapiraca", ...],
@@ -57,18 +57,20 @@ const COUNTRIES = [
 ];
 
 function createUUID(): string {
-  const cryptoObj: Crypto | undefined = typeof globalThis !== 'undefined' ? globalThis.crypto : undefined
+  const cryptoObj: Crypto | undefined =
+    typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
 
   if (cryptoObj?.randomUUID) {
-    return cryptoObj.randomUUID()
+    return cryptoObj.randomUUID();
   }
 
   // Fallback simples (RFC4122-ish) para ambientes sem randomUUID
-  const bytes = new Uint8Array(16)
+  const bytes = new Uint8Array(16);
   if (cryptoObj?.getRandomValues) {
-    cryptoObj.getRandomValues(bytes)
+    cryptoObj.getRandomValues(bytes);
   } else {
-    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    for (let i = 0; i < bytes.length; i++)
+      bytes[i] = Math.floor(Math.random() * 256);
   }
 
   bytes[6] = (bytes[6] & 0x0f) | 0x40;
@@ -100,7 +102,10 @@ export function LocationFields({
 
   const [removeIndex, setRemoveIndex] = useState<number | null>(null);
 
-  const { fields, append, remove, replace } = useFieldArray<BusinessInput, "location.units">({
+  const { fields, append, remove, replace } = useFieldArray<
+    BusinessInput,
+    "location.units"
+  >({
     control,
     name: "location.units",
   });
@@ -112,24 +117,37 @@ export function LocationFields({
   // Limpar dependências quando country muda (single)
   useEffect(() => {
     if (!hasMultipleUnits) {
-      setValue("location.state", "", { shouldDirty: true, shouldValidate: true });
-      setValue("location.city", "", { shouldDirty: true, shouldValidate: true });
+      setValue("location.state", "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      setValue("location.city", "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
     }
 
     // Sempre limpa state/city de topo quando trocar de país
     // (como são opcionais e dependentes)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [country]);
 
   // Limpar city quando state muda (single)
   useEffect(() => {
     if (!hasMultipleUnits) {
-      setValue("location.city", "", { shouldDirty: true, shouldValidate: true });
+      setValue("location.city", "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 
   const unitsCountLabel = useMemo(() => {
     if (fields.length === 0) return "Nenhuma unidade adicionada ainda";
-    return `${fields.length} ${fields.length === 1 ? "unidade cadastrada" : "unidades cadastradas"}`;
+    return `${fields.length} ${
+      fields.length === 1 ? "unidade cadastrada" : "unidades cadastradas"
+    }`;
   }, [fields.length]);
 
   const handleAddUnit = () => {
@@ -170,13 +188,22 @@ export function LocationFields({
   };
 
   const handleToggleMultipleUnits = (checked: boolean) => {
-    setValue("location.hasMultipleUnits", checked, { shouldDirty: true, shouldValidate: true });
+    setValue("location.hasMultipleUnits", checked, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
     if (!checked) {
       replace([]);
     } else {
       // No modo múltiplas unidades, topo não usa state/city
-      setValue("location.state", "", { shouldDirty: true, shouldValidate: true });
-      setValue("location.city", "", { shouldDirty: true, shouldValidate: true });
+      setValue("location.state", "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      setValue("location.city", "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
     }
   };
 
@@ -207,10 +234,19 @@ export function LocationFields({
           <Select
             value={country || ""}
             onValueChange={(value) => {
-              setValue("location.country", value, { shouldDirty: true, shouldValidate: true });
+              setValue("location.country", value, {
+                shouldDirty: true,
+                shouldValidate: true,
+              });
               // Reinicia dependências do topo
-              setValue("location.state", "", { shouldDirty: true, shouldValidate: true });
-              setValue("location.city", "", { shouldDirty: true, shouldValidate: true });
+              setValue("location.state", "", {
+                shouldDirty: true,
+                shouldValidate: true,
+              });
+              setValue("location.city", "", {
+                shouldDirty: true,
+                shouldValidate: true,
+              });
               // Atualiza defaults das unidades existentes (se houver)
               if (hasMultipleUnits && fields.length > 0) {
                 fields.forEach((_, idx) => {
@@ -220,7 +256,10 @@ export function LocationFields({
               }
             }}
           >
-            <SelectTrigger id="location.country" error={errors.location?.country?.message}>
+            <SelectTrigger
+              id="location.country"
+              error={errors.location?.country?.message}
+            >
               <SelectValue placeholder="Selecione o país" />
             </SelectTrigger>
             <SelectContent>
@@ -264,10 +303,16 @@ export function LocationFields({
                   <Select
                     value={state || ""}
                     onValueChange={(value) =>
-                      setValue("location.state", value, { shouldDirty: true, shouldValidate: true })
+                      setValue("location.state", value, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
                     }
                   >
-                    <SelectTrigger id="location.state" error={errors.location?.state?.message}>
+                    <SelectTrigger
+                      id="location.state"
+                      error={errors.location?.state?.message}
+                    >
                       <SelectValue placeholder="Selecione o estado" />
                     </SelectTrigger>
                     <SelectContent>
@@ -298,10 +343,16 @@ export function LocationFields({
                   <Select
                     value={watch("location.city") || ""}
                     onValueChange={(value) =>
-                      setValue("location.city", value, { shouldDirty: true, shouldValidate: true })
+                      setValue("location.city", value, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
                     }
                   >
-                    <SelectTrigger id="location.city" error={errors.location?.city?.message}>
+                    <SelectTrigger
+                      id="location.city"
+                      error={errors.location?.city?.message}
+                    >
                       <SelectValue placeholder="Selecione a cidade" />
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px] overflow-y-auto">
@@ -349,7 +400,9 @@ export function LocationFields({
 
             {/* Units List */}
             {fields.map((field, index) => {
-              const unitCountry = watch(`location.units.${index}.country` as const);
+              const unitCountry = watch(
+                `location.units.${index}.country` as const
+              );
               const unitIsBrazil = unitCountry === "Brasil";
               const unitState = watch(`location.units.${index}.state` as const);
               const unitCanShowState = Boolean(unitCountry);
@@ -399,12 +452,14 @@ export function LocationFields({
                     <Select
                       value={unitCountry || ""}
                       onValueChange={(value) => {
-                        setUnitCountry(index, value)
-                        clearUnitStateCity(index)
+                        setUnitCountry(index, value);
+                        clearUnitStateCity(index);
                       }}
                     >
                       <SelectTrigger
-                        error={errors.location?.units?.[index]?.country?.message}
+                        error={
+                          errors.location?.units?.[index]?.country?.message
+                        }
                       >
                         <SelectValue placeholder="Selecione o país" />
                       </SelectTrigger>
@@ -426,12 +481,14 @@ export function LocationFields({
                         <Select
                           value={unitState || ""}
                           onValueChange={(value) => {
-                            setUnitState(index, value)
-                            setUnitCity(index, "")
+                            setUnitState(index, value);
+                            setUnitCity(index, "");
                           }}
                         >
                           <SelectTrigger
-                            error={errors.location?.units?.[index]?.state?.message}
+                            error={
+                              errors.location?.units?.[index]?.state?.message
+                            }
                           >
                             <SelectValue placeholder="Selecione o estado" />
                           </SelectTrigger>
@@ -447,8 +504,12 @@ export function LocationFields({
                         <Input
                           type="text"
                           placeholder="Ex: Lisboa"
-                          error={errors.location?.units?.[index]?.state?.message}
-                          {...register(`location.units.${index}.state` as const)}
+                          error={
+                            errors.location?.units?.[index]?.state?.message
+                          }
+                          {...register(
+                            `location.units.${index}.state` as const
+                          )}
                         />
                       )}
                     </div>
@@ -460,11 +521,15 @@ export function LocationFields({
                       <Label>Cidade (opcional)</Label>
                       {unitIsBrazil ? (
                         <Select
-                          value={watch(`location.units.${index}.city` as const) || ""}
+                          value={
+                            watch(`location.units.${index}.city` as const) || ""
+                          }
                           onValueChange={(value) => setUnitCity(index, value)}
                         >
                           <SelectTrigger
-                            error={errors.location?.units?.[index]?.city?.message}
+                            error={
+                              errors.location?.units?.[index]?.city?.message
+                            }
                           >
                             <SelectValue placeholder="Selecione a cidade" />
                           </SelectTrigger>
@@ -530,29 +595,37 @@ export function LocationFields({
       </div>
 
       {/* Confirmação de Remoção */}
-      <Dialog open={removeIndex !== null} onOpenChange={(open) => !open && setRemoveIndex(null)}>
+      <Dialog
+        open={removeIndex !== null}
+        onOpenChange={(open) => !open && setRemoveIndex(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Remover unidade?</DialogTitle>
             <DialogDescription>
-              Esta ação remove a unidade selecionada. Se for a última unidade, o modo de múltiplas unidades será desativado.
+              Esta ação remove a unidade selecionada. Se for a última unidade, o
+              modo de múltiplas unidades será desativado.
             </DialogDescription>
           </DialogHeader>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setRemoveIndex(null)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRemoveIndex(null)}
+            >
               Cancelar
             </Button>
             <Button
               type="button"
               variant="danger"
               onClick={() => {
-                if (removeIndex === null) return
-                const isLast = fields.length === 1
-                remove(removeIndex)
-                setRemoveIndex(null)
+                if (removeIndex === null) return;
+                const isLast = fields.length === 1;
+                remove(removeIndex);
+                setRemoveIndex(null);
                 if (isLast) {
-                  handleToggleMultipleUnits(false)
+                  handleToggleMultipleUnits(false);
                 }
               }}
             >
