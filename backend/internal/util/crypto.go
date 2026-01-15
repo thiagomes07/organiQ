@@ -134,19 +134,21 @@ func constantTimeCompare(a, b []byte) bool {
 
 // CustomClaims contém os claims customizados do JWT
 type CustomClaims struct {
-	Sub   string `json:"sub"` // user_id
-	Email string `json:"email"`
+	Sub                    string `json:"sub"` // user_id
+	Email                  string `json:"email"`
+	HasCompletedOnboarding bool   `json:"hasCompletedOnboarding"`
 	jwt.RegisteredClaims
 }
 
 // GenerateAccessToken cria um access token (15 minutos)
-func (cs *CryptoService) GenerateAccessToken(userID uuid.UUID, email string) (string, error) {
+func (cs *CryptoService) GenerateAccessToken(userID uuid.UUID, email string, hasCompletedOnboarding bool) (string, error) {
 	now := time.Now()
 	expiresAt := now.Add(15 * time.Minute)
 
 	claims := CustomClaims{
-		Sub:   userID.String(),
-		Email: email,
+		Sub:                    userID.String(),
+		Email:                  email,
+		HasCompletedOnboarding: hasCompletedOnboarding,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(now),

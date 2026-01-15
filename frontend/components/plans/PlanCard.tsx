@@ -33,14 +33,12 @@ export function PlanCard({ plan, onSelect, isRecommended, isLoading }: PlanCardP
 
       <CardHeader className="text-center pt-8">
         <CardTitle className="text-2xl">{plan.name}</CardTitle>
-        <CardDescription>
-          <div className="mt-4">
-            <span className="text-4xl font-bold font-all-round text-[var(--color-primary-dark)]">
-              {formatCurrency(plan.price)}
-            </span>
-            <span className="text-sm font-onest text-[var(--color-primary-dark)]/60">/mês</span>
-          </div>
-        </CardDescription>
+        <div className="mt-4">
+          <span className="text-4xl font-bold font-all-round text-[var(--color-primary-dark)]">
+            {formatCurrency(plan.price)}
+          </span>
+          <span className="text-sm font-onest text-[var(--color-primary-dark)]/60">/mês</span>
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
