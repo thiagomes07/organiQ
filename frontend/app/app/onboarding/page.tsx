@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function OnboardingPage() {
   return (
     <div className="min-h-screen p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto px-6">
         <OnboardingWizard />
       </div>
     </div>

@@ -15,17 +15,18 @@ interface StepIndicatorProps {
 
 export function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
   return (
-    <div className="w-full mb-8">
+    <div className="w-full mb-8 px-6">
+      
       {/* Desktop: Horizontal */}
-      <div className="hidden md:flex items-center justify-between">
+      <div className="hidden md:flex items-center">
         {steps.map((step, index) => {
           const isCompleted = currentStep > step.number
           const isCurrent = currentStep === step.number
           const isLast = index === steps.length - 1
 
           return (
-            <div key={step.number} className="flex items-center flex-1">
-              {/* Step Circle */}
+            <div key={step.number} className="flex items-center" style={{ flex: isLast ? '0 0 auto' : '1 1 0%' }}>
+              {/* Step Circle & Label Wrapper */}
               <div className="flex flex-col items-center">
                 <div
                   className={cn(
@@ -65,9 +66,10 @@ export function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
               {!isLast && (
                 <div
                   className={cn(
-                    'flex-1 h-0.5 mx-4 transition-all duration-200',
+                    'h-0.5 transition-all duration-200',
                     isCompleted ? 'bg-[var(--color-success)]' : 'bg-[var(--color-border)]'
                   )}
+                  style={{ flex: '1 1 0%', margin: '0 16px' }}
                 />
               )}
             </div>
