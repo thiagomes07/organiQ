@@ -1,8 +1,9 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { FileText, PlusCircle, Settings, LogOut } from "lucide-react";
+import { FileText, PlusCircle, Settings, LogOut, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
@@ -33,11 +34,24 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const { logout, isLoggingOut, user } = useAuth();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fecha o dropdown quando clicar fora
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
-    if (window.confirm("Tem certeza que deseja sair?")) {
-      logout();
-    }
+    setIsDropdownOpen(false);
+    logout();
   };
 
   return (
@@ -49,14 +63,17 @@ export function Sidebar() {
         </h1>
       </div>
 
-      {/* User Info */}
+      {/* User Info with Dropdown */}
       {user && (
-        <div className="px-4 py-4 border-b border-[var(--color-border)]">
-          <div className="flex items-center gap-3">
+        <div className="px-4 py-4 border-b border-[var(--color-border)] relative" ref={dropdownRef}>
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="flex items-center gap-3 w-full hover:bg-[var(--color-primary-dark)]/5 rounded-[var(--radius-sm)] p-2 -m-2 transition-colors duration-200"
+          >
             <div className="flex items-center justify-center h-10 w-10 rounded-full bg-[var(--color-primary-purple)]/10 text-[var(--color-primary-purple)] font-semibold font-all-round">
               {user.name.charAt(0).toUpperCase()}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-medium font-all-round text-[var(--color-primary-dark)] truncate">
                 {user.name}
               </p>
@@ -64,7 +81,31 @@ export function Sidebar() {
                 {user.email}
               </p>
             </div>
-          </div>
+            <ChevronDown 
+              className={cn(
+                "h-4 w-4 text-[var(--color-primary-dark)]/60 transition-transform duration-200",
+                isDropdownOpen && "rotate-180"
+              )} 
+            />
+          </button>
+
+          {/* Dropdown Menu */}
+          {isDropdownOpen && (
+            <div className="absolute top-full left-4 right-4 mt-2 bg-white rounded-[var(--radius-sm)] shadow-lg border border-[var(--color-border)] z-50 overflow-hidden">
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className={cn(
+                  "flex items-center gap-3 w-full px-4 py-3 text-sm font-medium font-onest transition-colors duration-200",
+                  "text-[var(--color-error)] hover:bg-[var(--color-error)]/10",
+                  "disabled:opacity-50 disabled:cursor-not-allowed"
+                )}
+              >
+                <LogOut className="h-4 w-4" />
+                <span>{isLoggingOut ? "Saindo..." : "Sair da conta"}</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -118,22 +159,6 @@ export function Sidebar() {
           </div>
         </div>
       )}
-
-      {/* Logout */}
-      <div className="px-3 py-3 border-t border-[var(--color-border)]">
-        <button
-          onClick={handleLogout}
-          disabled={isLoggingOut}
-          className={cn(
-            "flex items-center gap-3 w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-sm font-medium font-onest transition-colors duration-200",
-            "text-[var(--color-error)] hover:bg-[var(--color-error)]/10",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
-          )}
-        >
-          <LogOut className="h-5 w-5" />
-          <span>{isLoggingOut ? "Saindo..." : "Sair"}</span>
-        </button>
-      </div>
     </aside>
   );
 }
