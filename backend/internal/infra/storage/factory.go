@@ -54,6 +54,12 @@ func newMinIOStorage(cfg *config.Config) (StorageService, error) {
 		o.UsePathStyle = true // MinIO usa path-style URLs
 	})
 
+	// Tentar criar o bucket automaticamente (ignora se já existir)
+	bucketName := cfg.Storage.MinIOBucket
+	if err := ensureBucketExists(client, bucketName); err != nil {
+		log.Warn().Err(err).Str("bucket", bucketName).Msg("Não foi possível criar bucket (pode já existir)")
+	}
+
 	storage := NewS3Storage(
 		client,
 		cfg.Storage.MinIOBucket,
@@ -77,6 +83,13 @@ func newMinIOStorage(cfg *config.Config) (StorageService, error) {
 			return storage, nil
 		}
 
+		// Tentar criar bucket novamente se HealthCheck falhar (bucket pode não existir)
+		if i == 0 || i == 5 || i == 10 {
+			if bucketErr := ensureBucketExists(client, bucketName); bucketErr != nil {
+				log.Debug().Err(bucketErr).Msg("Tentativa de criar bucket falhou")
+			}
+		}
+
 		log.Warn().
 			Err(err).
 			Int("attempt", i+1).
@@ -87,6 +100,36 @@ func newMinIOStorage(cfg *config.Config) (StorageService, error) {
 	}
 
 	return nil, fmt.Errorf("MinIO não ficou pronto após %d tentativas", maxRetries)
+}
+
+// ensureBucketExists cria o bucket se não existir
+func ensureBucketExists(client *s3.Client, bucketName string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Verificar se bucket existe
+	_, err := client.HeadBucket(ctx, &s3.HeadBucketInput{
+		Bucket: aws.String(bucketName),
+	})
+
+	if err == nil {
+		log.Debug().Str("bucket", bucketName).Msg("Bucket já existe")
+		return nil
+	}
+
+	// Bucket não existe, tentar criar
+	log.Info().Str("bucket", bucketName).Msg("Criando bucket no MinIO")
+
+	_, createErr := client.CreateBucket(ctx, &s3.CreateBucketInput{
+		Bucket: aws.String(bucketName),
+	})
+
+	if createErr != nil {
+		return fmt.Errorf("erro ao criar bucket: %w", createErr)
+	}
+
+	log.Info().Str("bucket", bucketName).Msg("Bucket criado com sucesso")
+	return nil
 }
 
 // newS3Storage cria cliente para AWS S3 (production)

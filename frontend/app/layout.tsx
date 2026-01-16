@@ -97,7 +97,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" className={`${allRoundGothic.variable} ${onest.variable}`}>
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         <Providers>
           {children}
           <Toaster position="top-right" richColors closeButton />

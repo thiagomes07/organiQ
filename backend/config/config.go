@@ -49,14 +49,14 @@ type DatabaseConfig struct {
 // StorageConfig holds blob storage configuration
 type StorageConfig struct {
 	Type string // "minio" | "s3"
-	
+
 	// MinIO specific
-	MinIOEndpoint   string
-	MinIOAccessKey  string
-	MinIOSecretKey  string
-	MinIOBucket     string
-	MinIOUseSSL     bool
-	
+	MinIOEndpoint  string
+	MinIOAccessKey string
+	MinIOSecretKey string
+	MinIOBucket    string
+	MinIOUseSSL    bool
+
 	// S3 specific
 	S3Bucket string
 	S3Region string
@@ -64,20 +64,21 @@ type StorageConfig struct {
 
 // QueueConfig holds message queue configuration
 type QueueConfig struct {
-	Endpoint                string
-	Region                  string
-	AccessKeyID             string
-	SecretAccessKey         string
-	ArticleGenerationQueue  string
-	ArticlePublishQueue     string
+	Enabled                bool // Se false, usa NoOpQueue
+	Endpoint               string
+	Region                 string
+	AccessKeyID            string
+	SecretAccessKey        string
+	ArticleGenerationQueue string
+	ArticlePublishQueue    string
 }
 
 // AuthConfig holds authentication configuration
 type AuthConfig struct {
-	JWTSecret              string
-	PasswordPepper         string
-	AccessTokenDuration    time.Duration
-	RefreshTokenDuration   time.Duration
+	JWTSecret            string
+	PasswordPepper       string
+	AccessTokenDuration  time.Duration
+	RefreshTokenDuration time.Duration
 }
 
 // CORSConfig holds CORS configuration
@@ -89,7 +90,7 @@ type CORSConfig struct {
 
 // AIConfig holds AI service configuration
 type AIConfig struct {
-	Provider    string  // "openai" | "anthropic"
+	Provider    string // "openai" | "anthropic"
 	APIKey      string
 	Model       string
 	MaxTokens   int
@@ -98,18 +99,18 @@ type AIConfig struct {
 
 // LoggerConfig holds logging configuration
 type LoggerConfig struct {
-	Level      string  // "debug" | "info" | "warn" | "error"
-	Format     string  // "json" | "console"
-	Output     string  // "stdout" | "file"
-	FilePath   string
+	Level    string // "debug" | "info" | "warn" | "error"
+	Format   string // "json" | "console"
+	Output   string // "stdout" | "file"
+	FilePath string
 }
 
 // WorkerConfig holds worker pool configuration
 type WorkerConfig struct {
-	PoolSize         int
-	PollInterval     time.Duration
-	MaxRetries       int
-	RetryBackoff     string  // "fixed" | "exponential"
+	PoolSize     int
+	PollInterval time.Duration
+	MaxRetries   int
+	RetryBackoff string // "fixed" | "exponential"
 }
 
 // RateLimitConfig holds rate limiting configuration
@@ -125,7 +126,7 @@ type PaymentConfig struct {
 	StripeWebhookSecret string
 	StripeSuccessURL    string
 	StripeCancelURL     string
-	
+
 	MercadoPagoAccessToken   string
 	MercadoPagoWebhookSecret string
 }

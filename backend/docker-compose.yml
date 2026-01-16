@@ -27,11 +27,8 @@ services:
       - MINIO_BUCKET=organiq-dev-brand-files
       - MINIO_USE_SSL=false
       
-      # Queue (LocalStack SQS)
-      - QUEUE_ENDPOINT=http://localstack:4566
-      - AWS_REGION=us-east-1
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
+      # Queue (desabilitado - usa NoOpQueue)
+      - QUEUE_ENABLED=false
       
       # AI
       - AI_API_KEY=your_ai_api_key_here
@@ -59,15 +56,9 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-      minio-setup:
-        condition: service_completed_successfully
-      localstack:
-        condition: service_healthy
-      localstack-setup:
-        condition: service_completed_successfully
     networks:
       - organiq-network
-    restart: on-failure # Reinicia se falhar, mas não se você parar manualmente
+    restart: on-failure
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
       interval: 30s
@@ -123,78 +114,6 @@ services:
       - organiq-network
     restart: unless-stopped
 
-  # ==========================================
-  # MinIO Client (Criação de Bucket)
-  # ==========================================
-  minio-setup:
-    image: minio/mc:latest
-    container_name: organiq-minio-setup
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      sleep 5;
-      mc alias set myminio http://minio:9000 minioadmin minioadmin;
-      mc mb myminio/organiq-dev-brand-files --ignore-existing;
-      mc anonymous set download myminio/organiq-dev-brand-files;
-      exit 0;
-      "
-    networks:
-      - organiq-network
-
-  # ==========================================
-  # LocalStack (AWS Services Local)
-  # ==========================================
-  localstack:
-    image: localstack/localstack:3.0
-    container_name: organiq-localstack
-    ports:
-      - "4566:4566"      # LocalStack Gateway
-    environment:
-      - SERVICES=sqs
-      - DEBUG=0
-      - PERSISTENCE=0
-      - EAGER_SERVICE_LOADING=1
-      - SKIP_SSL_CERT_DOWNLOAD=1
-    volumes:
-      - localstack_data:/var/lib/localstack
-      - /var/run/docker.sock:/var/run/docker.sock
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    networks:
-      - organiq-network
-    restart: unless-stopped
-
-  # ==========================================
-  # LocalStack Setup (Criar Filas SQS)
-  # ==========================================
-  localstack-setup:
-    image: amazon/aws-cli:latest
-    container_name: organiq-localstack-setup
-    depends_on:
-      localstack:
-        condition: service_healthy
-    environment:
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
-      - AWS_DEFAULT_REGION=us-east-1
-    entrypoint: >
-      /bin/sh -c "
-      echo 'Aguardando LocalStack ficar pronto...';
-      sleep 10;
-      echo 'Criando filas SQS...';
-      aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name article-generation-queue || true;
-      aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name article-publish-queue || true;
-      echo 'Filas criadas com sucesso!';
-      exit 0;
-      "
-    networks:
-      - organiq-network
-
 # ==========================================
 # Volumes Persistentes
 # ==========================================
@@ -202,8 +121,6 @@ volumes:
   postgres_data:
     driver: local
   minio_data:
-    driver: local
-  localstack_data:
     driver: local
 
 # ==========================================

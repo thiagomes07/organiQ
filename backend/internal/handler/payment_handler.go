@@ -125,6 +125,10 @@ func (h *PaymentHandler) CreateCheckout(w http.ResponseWriter, r *http.Request) 
 			util.RespondError(w, http.StatusNotFound, "user_not_found", "Usuário não encontrado")
 		} else if err.Error() == "invalid_plan_id" {
 			util.RespondError(w, http.StatusBadRequest, "invalid_plan", "Plano inválido")
+		} else if err.Error() == "user_already_has_plan" {
+			// Usuário já possui o plano solicitado — responder de forma amigável
+			log.Warn().Err(err).Msg("CreateCheckout: usuário já possui este plano")
+			util.RespondError(w, http.StatusBadRequest, "user_already_has_plan", "Usuário já possui este plano")
 		} else {
 			util.RespondError(w, http.StatusInternalServerError, "server_error", "Erro ao criar checkout")
 		}

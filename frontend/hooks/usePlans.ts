@@ -2,8 +2,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import api, { getErrorMessage } from "@/lib/axios";
-import { useAuthStore } from "@/store/authStore";
-import type { Plan, PlanInfo, CheckoutResponse, PaymentStatus } from "@/types";
+import axios from "axios";
+import { useHasCompletedOnboarding } from "@/store/authStore";
+import type { Plan, AccountPlanResponse, CheckoutResponse, PaymentStatus } from "@/types";
 
 // ============================================
 // API FUNCTIONS
@@ -15,9 +16,9 @@ const plansApi = {
     return data;
   },
 
-  getCurrentPlan: async (): Promise<PlanInfo> => {
-    const { data } = await api.get<PlanInfo>("/account/plan");
-    return data;
+  getCurrentPlan: async (): Promise<AccountPlanResponse> => {
+    const { data } = await api.get<{ plan: AccountPlanResponse }>("/account/plan");
+    return data.plan;
   },
 
   createCheckout: async (planId: string): Promise<CheckoutResponse> => {
@@ -60,8 +61,8 @@ const planKeys = {
 // ============================================
 
 export function usePlans() {
-  useRouter(); // Keep hook call to ensure client-side router is available
-  useAuthStore(); // Keep hook call to ensure auth store is available
+  const router = useRouter();
+  const hasCompletedOnboarding = useHasCompletedOnboarding();
 
   // ============================================
   // GET PLANS QUERY
@@ -90,10 +91,34 @@ export function usePlans() {
   const checkoutMutation = useMutation({
     mutationFn: plansApi.createCheckout,
     onSuccess: (data) => {
-      // Redirecionar para checkout
-      window.location.href = data.checkoutUrl;
+      console.log('Checkout created, redirecting to checkoutUrl:', data.checkoutUrl);
+      // Use a tiny delay to avoid potential click/form side-effects
+      setTimeout(() => {
+        window.location.href = data.checkoutUrl;
+      }, 50);
     },
     onError: (error) => {
+      console.error('Checkout error:', error);
+      // Se backend indicou que o usuário já possui o plano, redireciona
+      if (axios.isAxiosError(error) && (error as any).response?.data?.error === "user_already_has_plan") {
+          const target = hasCompletedOnboarding ? "/app" : "/app/onboarding";
+        console.log('User already has plan, redirecting (internal) to:', target);
+        try {
+          router.replace(target);
+        } catch (e) {
+          console.warn('router.replace failed in onError, will fallback', e);
+        }
+        setTimeout(() => {
+          if (window.location.pathname !== target) {
+            console.log('router did not navigate (onError), forcing full navigation to', target);
+            window.location.href = target;
+          } else {
+            console.log('router.replace succeeded (onError) to', target);
+          }
+        }, 300);
+        return
+      }
+
       const message = getErrorMessage(error);
       toast.error(message || "Erro ao criar checkout");
     },
@@ -106,8 +131,10 @@ export function usePlans() {
   const portalMutation = useMutation({
     mutationFn: plansApi.createPortalSession,
     onSuccess: (data) => {
-      // Redirecionar para portal
-      window.location.href = data.url;
+      console.log('Portal session created, redirecting to:', data.url);
+      setTimeout(() => {
+        window.location.href = data.url;
+      }, 50);
     },
     onError: (error) => {
       const message = getErrorMessage(error);
@@ -145,7 +172,43 @@ export function usePlans() {
   // HELPERS
   // ============================================
 
-  const selectPlan = (planId: string) => {
+  const selectPlan = async (planId: string) => {
+    console.log('selectPlan called with planId:', planId);
+    console.log('hasCompletedOnboarding:', hasCompletedOnboarding);
+    
+    // Always fetch current plan to ensure we have latest data
+    let currentPlan;
+    try {
+      const result = await currentPlanQuery.refetch();
+      currentPlan = result.data;
+      console.log('currentPlan:', currentPlan);
+    } catch (error) {
+      console.error('Failed to fetch current plan:', error);
+      // Proceed to checkout anyway, let backend handle it
+    }
+
+    // Se já é o plano atual, avançar no fluxo de onboarding/dashboard
+    if (currentPlan?.id === planId) {
+      const target = hasCompletedOnboarding ? "/app" : "/app/onboarding";
+      console.log('Redirecting (internal) to:', target);
+      try {
+        router.replace(target);
+      } catch (e) {
+        console.warn('router.replace failed, will fallback to full navigation', e);
+      }
+      setTimeout(() => {
+        if (window.location.pathname !== target) {
+          console.log('router did not navigate, forcing full navigation to', target);
+          window.location.href = target;
+        } else {
+          console.log('router.replace succeeded to', target);
+        }
+      }, 300);
+      return;
+    }
+
+    console.log('Creating checkout for planId:', planId);
+    // Caso contrário, iniciar checkout
     checkoutMutation.mutate(planId);
   };
 
@@ -162,7 +225,7 @@ export function usePlans() {
   };
 
   const isCurrentPlan = (planId: string) => {
-    return currentPlanQuery.data?.name === getPlanById(planId)?.name;
+    return currentPlanQuery.data?.id === planId;
   };
 
   const canUpgrade = (targetPlanId: string) => {

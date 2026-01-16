@@ -176,6 +176,19 @@ export interface PaymentStatus {
 // ACCOUNT TYPES
 // ============================================
 
+export interface AccountPlanResponse {
+  id: string;
+  name: string;
+  maxArticles: number;
+  articlesUsed: number;
+  remainingArticles: number;
+  limitReached: boolean;
+  price: number;
+  active: boolean;
+  features: string[];
+  nextBillingDate?: string;
+}
+
 export interface ProfileUpdateData {
   name: string;
 }

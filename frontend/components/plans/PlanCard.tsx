@@ -64,6 +64,7 @@ export function PlanCard({ plan, onSelect, isRecommended, isLoading }: PlanCardP
 
       <CardFooter>
         <Button
+          type="button"
           variant="secondary"
           className="w-full"
           size="lg"
