@@ -51,11 +51,12 @@ type Location struct {
 
 // Unit representa uma unidade de negócio
 type Unit struct {
-	ID      uuid.UUID `json:"id"`
-	Name    string    `json:"name"`
-	Country string    `json:"country"`
-	State   string    `json:"state"`
-	City    string    `json:"city"`
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Country   string    `json:"country"`
+	State     string    `json:"state"`
+	City      string    `json:"city"`
+	IsPrimary bool      `json:"isPrimary"`
 }
 
 // BlogURLs representa lista de URLs de blogs
@@ -100,23 +101,23 @@ func (BusinessProfile) TableName() string {
 // Validate valida as regras de negócio
 func (bp *BusinessProfile) Validate() error {
 	if bp.ID == uuid.Nil {
-		return errors.New("id é obrigatório")
+		return errors.New("erro interno: ID inválido")
 	}
 
 	if bp.UserID == uuid.Nil {
-		return errors.New("user_id é obrigatório")
+		return errors.New("erro interno: usuário não identificado")
 	}
 
 	if len(bp.Description) == 0 || len(bp.Description) > 500 {
-		return errors.New("description deve ter entre 1 e 500 caracteres")
+		return errors.New("a descrição do seu negócio precisa ter entre 1 e 500 caracteres")
 	}
 
 	if !bp.PrimaryObjective.IsValid() {
-		return errors.New("primaryObjective inválido")
+		return errors.New("selecione um objetivo principal válido")
 	}
 
 	if bp.SecondaryObjective != nil && !bp.SecondaryObjective.IsValid() {
-		return errors.New("secondaryObjective inválido")
+		return errors.New("o objetivo secundário selecionado não é válido")
 	}
 
 	if err := bp.Location.Validate(); err != nil {
@@ -124,15 +125,15 @@ func (bp *BusinessProfile) Validate() error {
 	}
 
 	if bp.SiteURL != nil && len(*bp.SiteURL) == 0 {
-		return errors.New("siteUrl deve ser não-vazio se fornecido")
+		return errors.New("a URL do site não pode estar vazia")
 	}
 
 	if bp.HasBlog && len(bp.BlogURLs) == 0 {
-		return errors.New("blogUrls é obrigatório quando hasBlog é true")
+		return errors.New("você marcou que tem um blog. Adicione pelo menos uma URL do blog")
 	}
 
 	if bp.BrandFileURL != nil && len(*bp.BrandFileURL) == 0 {
-		return errors.New("brandFileUrl deve ser não-vazio se fornecido")
+		return errors.New("erro ao processar o arquivo do manual da marca")
 	}
 
 	return nil
@@ -141,24 +142,42 @@ func (bp *BusinessProfile) Validate() error {
 // Validate valida a estrutura Location
 func (l Location) Validate() error {
 	if len(l.Country) == 0 {
-		return errors.New("location.country é obrigatório")
+		return errors.New("selecione o país onde seu negócio atua")
 	}
 
-	if len(l.State) == 0 {
-		return errors.New("location.state é obrigatório")
+	// Lógica para Single Unit (Digital ou Físico)
+	if !l.HasMultipleUnits {
+		// Se tem cidade, PRECISA ter estado
+		if len(l.City) > 0 && len(l.State) == 0 {
+			return errors.New("para informar a cidade, você precisa selecionar o estado primeiro")
+		}
+
+		// Se tem estado, PRECISA ter cidade (Físico)
+		if len(l.State) > 0 && len(l.City) == 0 {
+			return errors.New("você selecionou um estado. Por favor, selecione também a cidade onde seu negócio atua")
+		}
+
+		// Se não tem nem estado nem cidade -> Digital (OK, só país)
 	}
 
-	if len(l.City) == 0 {
-		return errors.New("location.city é obrigatório")
-	}
+	// Lógica para Múltiplas Unidades
+	if l.HasMultipleUnits {
+		if len(l.Units) == 0 {
+			return errors.New("você marcou que tem múltiplas unidades. Adicione pelo menos uma unidade")
+		}
 
-	if l.HasMultipleUnits && len(l.Units) == 0 {
-		return errors.New("units é obrigatório quando hasMultipleUnits é true")
-	}
+		primaryCount := 0
+		for _, unit := range l.Units {
+			if err := unit.Validate(); err != nil {
+				return err
+			}
+			if unit.IsPrimary {
+				primaryCount++
+			}
+		}
 
-	for _, unit := range l.Units {
-		if err := unit.Validate(); err != nil {
-			return err
+		if primaryCount > 1 {
+			return errors.New("você marcou mais de uma unidade como principal. Selecione apenas uma")
 		}
 	}
 
@@ -168,23 +187,22 @@ func (l Location) Validate() error {
 // Validate valida a estrutura Unit
 func (u Unit) Validate() error {
 	if u.ID == uuid.Nil {
-		return errors.New("unit.id é obrigatório")
+		return errors.New("ID da unidade é inválido")
 	}
 
-	if len(u.Name) == 0 {
-		return errors.New("unit.name é obrigatório")
-	}
+	// Name agora é opcional, removemos a validação
+	// if len(u.Name) == 0 { ... }
 
 	if len(u.Country) == 0 {
-		return errors.New("unit.country é obrigatório")
+		return errors.New("selecione o país desta unidade")
 	}
 
 	if len(u.State) == 0 {
-		return errors.New("unit.state é obrigatório")
+		return errors.New("selecione o estado desta unidade")
 	}
 
 	if len(u.City) == 0 {
-		return errors.New("unit.city é obrigatório")
+		return errors.New("selecione a cidade desta unidade")
 	}
 
 	return nil

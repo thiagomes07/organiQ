@@ -168,15 +168,18 @@ func main() {
 
 	saveBusinessUC := wizard.NewSaveBusinessUseCase(
 		repositories.Business,
+		repositories.User,
 		storageService,
 	)
 
 	saveCompetitorsUC := wizard.NewSaveCompetitorsUseCase(
 		repositories.Business,
+		repositories.User,
 	)
 
 	saveIntegrationsUC := wizard.NewSaveIntegrationsUseCase(
 		repositories.Integration,
+		repositories.User,
 		cryptoService,
 	)
 
@@ -191,6 +194,12 @@ func main() {
 		repositories.User,
 		repositories.ArticleJob,
 		repositories.ArticleIdea,
+	)
+
+	getWizardDataUC := wizard.NewGetWizardDataUseCase(
+		repositories.User,
+		repositories.Business,
+		repositories.Integration,
 	)
 
 	// ============================================
@@ -268,6 +277,7 @@ func main() {
 		generateIdeasUC,
 		getIdeasStatusUC,
 		publishArticlesUC,
+		getWizardDataUC,
 	)
 
 	// ============================================
@@ -550,6 +560,7 @@ func setupRouter(
 
 			// Wizard routes com rate limit específico: 10 req/1h por User
 			r.Route("/wizard", func(r chi.Router) {
+				r.Get("/data", wizardHandler.GetWizardData)
 				r.Post("/business", wizardHandler.SaveBusiness)
 				r.Post("/competitors", wizardHandler.SaveCompetitors)
 				r.Post("/integrations", wizardHandler.SaveIntegrations)
@@ -571,6 +582,7 @@ func setupRouter(
 				r.Post("/create-checkout", paymentHandler.CreateCheckout)
 				r.Get("/status/{sessionId}", paymentHandler.GetStatus)
 				r.Post("/create-portal-session", paymentHandler.CreatePortalSession)
+				r.Post("/confirm-free-plan", paymentHandler.ConfirmFreePlan)
 			})
 
 			// Article routes (protegidas) com rate limit: 100 req/1min por User - spec 4.6

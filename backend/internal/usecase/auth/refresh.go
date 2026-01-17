@@ -69,7 +69,7 @@ func (uc *RefreshAccessTokenUseCase) Execute(ctx context.Context, input RefreshA
 		return nil, err
 	}
 
-	accessToken, err := uc.crypto.GenerateAccessToken(user.ID, user.Email, user.HasCompletedOnboarding)
+	accessToken, err := uc.crypto.GenerateAccessToken(user.ID, user.Email, user.HasCompletedOnboarding, user.OnboardingStep)
 	if err != nil {
 		return nil, err
 	}

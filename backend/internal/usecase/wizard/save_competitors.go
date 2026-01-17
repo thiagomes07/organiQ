@@ -27,14 +27,17 @@ type SaveCompetitorsOutput struct {
 // SaveCompetitorsUseCase implementa o caso de uso
 type SaveCompetitorsUseCase struct {
 	businessRepo repository.BusinessRepository
+	userRepo     repository.UserRepository
 }
 
 // NewSaveCompetitorsUseCase cria nova instância
 func NewSaveCompetitorsUseCase(
 	businessRepo repository.BusinessRepository,
+	userRepo repository.UserRepository,
 ) *SaveCompetitorsUseCase {
 	return &SaveCompetitorsUseCase{
 		businessRepo: businessRepo,
+		userRepo:     userRepo,
 	}
 }
 
@@ -109,6 +112,15 @@ func (uc *SaveCompetitorsUseCase) Execute(ctx context.Context, input SaveCompeti
 		Str("user_id", input.UserID).
 		Int("count", len(validURLs)).
 		Msg("SaveCompetitorsUseCase bem-sucedido")
+
+	// 6. Atualizar onboarding_step do usuário para 3 (competitors completo)
+	user, err := uc.userRepo.FindByID(ctx, userID)
+	if err == nil && user != nil && user.OnboardingStep < 3 {
+		user.OnboardingStep = 3
+		if err := uc.userRepo.Update(ctx, user); err != nil {
+			log.Warn().Err(err).Msg("SaveCompetitorsUseCase: erro ao atualizar onboarding_step")
+		}
+	}
 
 	return &SaveCompetitorsOutput{
 		Success: true,

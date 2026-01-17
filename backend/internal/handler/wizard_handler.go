@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -24,6 +25,7 @@ type WizardHandler struct {
 	generateIdeasUC    *wizard.GenerateIdeasUseCase
 	getIdeasStatusUC   *wizard.GetIdeasStatusUseCase
 	publishArticlesUC  *wizard.PublishArticlesUseCase
+	getWizardDataUC    *wizard.GetWizardDataUseCase
 }
 
 // NewWizardHandler cria nova instância
@@ -34,6 +36,7 @@ func NewWizardHandler(
 	generateIdeasUC *wizard.GenerateIdeasUseCase,
 	getIdeasStatusUC *wizard.GetIdeasStatusUseCase,
 	publishArticlesUC *wizard.PublishArticlesUseCase,
+	getWizardDataUC *wizard.GetWizardDataUseCase,
 ) *WizardHandler {
 	return &WizardHandler{
 		saveBusinessUC:     saveBusinessUC,
@@ -42,7 +45,59 @@ func NewWizardHandler(
 		generateIdeasUC:    generateIdeasUC,
 		getIdeasStatusUC:   getIdeasStatusUC,
 		publishArticlesUC:  publishArticlesUC,
+		getWizardDataUC:    getWizardDataUC,
 	}
+}
+
+// ============================================
+// GET /api/wizard/data
+// ============================================
+
+// GetWizardDataResponse response body
+type GetWizardDataResponse struct {
+	OnboardingStep int                       `json:"onboardingStep"`
+	Business       *wizard.BusinessDataOutput `json:"business,omitempty"`
+	Competitors    []string                  `json:"competitors,omitempty"`
+	HasIntegration bool                      `json:"hasIntegration"`
+}
+
+// GetWizardData implementa GET /api/wizard/data
+func (h *WizardHandler) GetWizardData(w http.ResponseWriter, r *http.Request) {
+	log.Debug().Msg("WizardHandler GetWizardData iniciado")
+
+	// 1. Extrair user_id do context
+	userID := middleware.GetUserIDFromContext(r)
+	if userID == "" {
+		log.Warn().Msg("GetWizardData: usuário não autenticado")
+		util.RespondError(w, http.StatusUnauthorized, "unauthorized", "Usuário não autenticado")
+		return
+	}
+
+	// 2. Executar use case
+	input := wizard.GetWizardDataInput{
+		UserID: userID,
+	}
+
+	output, err := h.getWizardDataUC.Execute(r.Context(), input)
+	if err != nil {
+		log.Error().Err(err).Msg("GetWizardData: erro no use case")
+		if err.Error() == "user_not_found" {
+			util.RespondError(w, http.StatusNotFound, "user_not_found", "Usuário não encontrado")
+		} else {
+			util.RespondError(w, http.StatusInternalServerError, "server_error", "Erro ao buscar dados")
+		}
+		return
+	}
+
+	// 3. Responder
+	response := GetWizardDataResponse{
+		OnboardingStep: output.OnboardingStep,
+		Business:       output.Business,
+		Competitors:    output.Competitors,
+		HasIntegration: output.HasIntegration,
+	}
+
+	util.RespondJSON(w, http.StatusOK, response)
 }
 
 // ============================================
@@ -286,8 +341,20 @@ func (h *WizardHandler) SaveBusiness(w http.ResponseWriter, r *http.Request) {
 		siteURLPtr = &siteURL
 	}
 
-	// Parse blog URLs (array de strings do formulário)
+	// Parse blog URLs (pode vir como array de strings ou string JSON)
 	blogURLs := r.Form["blogUrls"]
+	// Se veio uma única string que parece ser JSON array, fazer parse
+	if len(blogURLs) == 1 && strings.HasPrefix(blogURLs[0], "[") {
+		var parsedURLs []string
+		if err := json.Unmarshal([]byte(blogURLs[0]), &parsedURLs); err == nil {
+			blogURLs = parsedURLs
+		} else {
+			// Se falhou o parse, manter vazio se for "[]"
+			if blogURLs[0] == "[]" {
+				blogURLs = []string{}
+			}
+		}
+	}
 
 	// 4. Processar upload de arquivo de brand (opcional)
 	var brandFile io.Reader

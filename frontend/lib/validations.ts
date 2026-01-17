@@ -8,7 +8,7 @@ const passwordValidation = z
   .string()
   .min(6, "Senha deve ter no mínimo 6 caracteres")
   .max(100, "Senha muito longa")
-;
+  ;
 
 // ============================================
 // AUTH SCHEMAS
@@ -39,43 +39,75 @@ export const registerSchema = z.object({
 export const businessUnitSchema = z.object({
   id: z.string().uuid("ID inválido"),
   name: z.string().optional(),
-  country: z.string().min(1, "País é obrigatório"),
-  state: z.string().optional(),
-  city: z.string().optional(),
+  country: z.string().min(1, "Selecione o país desta unidade"),
+  state: z.string().min(1, "Selecione o estado desta unidade"),
+  city: z.string().min(1, "Selecione a cidade desta unidade"),
+  isPrimary: z.boolean().optional(),
 });
 
 export const locationSchema = z
   .object({
-    country: z.string().min(1, "País é obrigatório"),
+    country: z.string().min(1, "Selecione o país onde seu negócio atua"),
     state: z.string().optional(),
     city: z.string().optional(),
     hasMultipleUnits: z.boolean(),
     units: z.array(businessUnitSchema).optional(),
   })
-  .refine(
-    (data) => {
-      if (data.hasMultipleUnits) {
-        return data.units && data.units.length > 0;
+  .superRefine((data, ctx) => {
+    // 1. Validação para SINGLE UNIT (Digital ou Física)
+    if (!data.hasMultipleUnits) {
+      // Se preencheu cidade, OBRIGATORIAMENTE tem que ter estado
+      if (data.city && !data.state) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Para informar a cidade, você precisa selecionar o estado primeiro",
+          path: ["state"],
+        });
       }
-      return true;
-    },
-    {
-      message: "Adicione pelo menos uma unidade",
-      path: ["units"],
-    }
-  )
-  .refine(
-    (data) => {
-      if (data.hasMultipleUnits && data.units) {
-        return data.units.length <= 10;
+
+      // Se preencheu estado, OBRIGATORIAMENTE tem que ter cidade (Físico)
+      // "Se seu negócio é 100% digital, preencha apenas o País"
+      // Se não é digital (tem estado), então é físico (precisa de cidade)
+      if (data.state && !data.city) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Você selecionou um estado. Por favor, selecione também a cidade onde seu negócio atua",
+          path: ["city"],
+        });
       }
-      return true;
-    },
-    {
-      message: "Máximo de 10 unidades",
-      path: ["units"],
+      return;
     }
-  );
+
+    // 2. Validação para MÚLTIPLAS UNIDADES
+    if (data.hasMultipleUnits) {
+      if (!data.units || data.units.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Você marcou que tem múltiplas unidades. Adicione pelo menos uma unidade clicando no botão abaixo",
+          path: ["units"],
+        });
+        return;
+      }
+
+      if (data.units.length > 10) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Você pode cadastrar no máximo 10 unidades. Remova algumas para continuar",
+          path: ["units"],
+        });
+      }
+
+      // Valida se existe no máximo 1 unidade principal
+      const primaryCount = data.units.filter((u) => u.isPrimary).length;
+      if (primaryCount > 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Você marcou mais de uma unidade como principal. Selecione apenas uma",
+          path: ["units"],
+        });
+      }
+    }
+  });
 
 // ============================================
 // WIZARD SCHEMAS
@@ -85,15 +117,25 @@ const objectiveEnum = z.enum(["leads", "sales", "branding"], {
   message: "Selecione um objetivo válido",
 });
 
+const preprocessUrl = (val: unknown) => {
+  if (typeof val !== "string") return val;
+  const trimmed = val.trim();
+  if (trimmed === "") return "";
+  if (!trimmed.match(/^https?:\/\//)) {
+    return `https://${trimmed}`;
+  }
+  return trimmed;
+};
+
 export const businessSchema = z
   .object({
     description: z
       .string()
-      .min(10, "Descrição deve ter no mínimo 10 caracteres")
-      .max(500, "Descrição deve ter no máximo 500 caracteres")
+      .min(10, "A descrição do seu negócio precisa ter pelo menos 10 caracteres")
+      .max(500, "A descrição está muito longa. Use no máximo 500 caracteres")
       .refine(
         (val) => val.trim().split(/\s+/).length >= 5,
-        "Descrição deve ter pelo menos 5 palavras"
+        "Descreva seu negócio com pelo menos 5 palavras para gerar conteúdo de qualidade"
       ),
 
     primaryObjective: objectiveEnum,
@@ -102,32 +144,37 @@ export const businessSchema = z
 
     location: locationSchema,
 
-    siteUrl: z.string().url("URL inválida").optional().or(z.literal("")),
+    siteUrl: z.preprocess(
+      preprocessUrl,
+      z.string().url("Digite uma URL válida (exemplo: seusite.com.br)").optional().or(z.literal(""))
+    ),
 
     hasBlog: z.boolean(),
 
-    blogUrls: z.array(z.string().url("URL inválida")),
+    blogUrls: z.array(
+      z.preprocess(preprocessUrl, z.string().url("Digite uma URL válida para o blog"))
+    ),
 
     articleCount: z
       .number()
-      .min(1, "Selecione pelo menos 1 matéria")
-      .max(50, "Máximo de 50 matérias"),
+      .min(1, "Selecione pelo menos 1 matéria para gerar")
+      .max(50, "Você pode gerar no máximo 50 matérias por vez"),
 
     brandFile: z
       .instanceof(File)
       .refine(
         (file) => file.size <= 5 * 1024 * 1024,
-        "Arquivo deve ter no máximo 5MB"
+        "O arquivo é muito grande. O tamanho máximo é 5MB"
       )
       .refine(
         (file) =>
           ["application/pdf", "image/jpeg", "image/png"].includes(file.type),
-        "Formato inválido. Use PDF, JPG ou PNG"
+        "Formato de arquivo não suportado. Use PDF, JPG ou PNG"
       )
       .refine((file) => {
         const ext = file.name.split(".").pop()?.toLowerCase();
         return ["pdf", "jpg", "jpeg", "png"].includes(ext || "");
-      }, "Extensão de arquivo inválida")
+      }, "Extensão de arquivo inválida. Use .pdf, .jpg ou .png")
       .optional(),
   })
   .refine(
@@ -141,7 +188,7 @@ export const businessSchema = z
       return true;
     },
     {
-      message: "Objetivo secundário deve ser diferente do primário",
+      message: "O objetivo secundário precisa ser diferente do objetivo principal",
       path: ["secondaryObjective"],
     }
   )
@@ -153,7 +200,7 @@ export const businessSchema = z
       return true;
     },
     {
-      message: "Adicione pelo menos uma URL do blog",
+      message: "Você marcou que tem um blog. Adicione pelo menos uma URL do blog",
       path: ["blogUrls"],
     }
   );

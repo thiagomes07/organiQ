@@ -46,6 +46,8 @@ export function OnboardingWizard() {
     publishArticles,
     updateArticleIdea,
     previousStep,
+    isLoadingWizardData,
+    isInitialized,
     isSubmittingBusiness,
     isSubmittingCompetitors,
     isSubmittingIntegrations,
@@ -54,6 +56,11 @@ export function OnboardingWizard() {
     approvedCount,
     canPublish,
   } = useWizard(true) // true = isOnboarding
+
+  // Loading state inicial enquanto busca dados do wizard
+  if (isLoadingWizardData || !isInitialized) {
+    return <LoadingOverlay messages={['Carregando seus dados...', 'Verificando progresso...']} />
+  }
 
   // Loading state para geração de ideias
   if (currentStep === 999 || isGeneratingIdeas) {

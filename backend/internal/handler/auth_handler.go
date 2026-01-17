@@ -78,6 +78,7 @@ type UserResponse struct {
 	MaxArticles            int    `json:"maxArticles"`
 	ArticlesUsed           int    `json:"articlesUsed"`
 	HasCompletedOnboarding bool   `json:"hasCompletedOnboarding"`
+	OnboardingStep         int    `json:"onboardingStep"`
 	CreatedAt              string `json:"createdAt"`
 }
 
@@ -138,6 +139,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		MaxArticles:            maxArticles,
 		ArticlesUsed:           output.User.ArticlesUsed,
 		HasCompletedOnboarding: output.User.HasCompletedOnboarding,
+		OnboardingStep:         output.User.OnboardingStep,
 		CreatedAt:              output.User.CreatedAt.Format(time.RFC3339),
 	}
 
@@ -212,6 +214,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		MaxArticles:            maxArticles,
 		ArticlesUsed:           output.User.ArticlesUsed,
 		HasCompletedOnboarding: output.User.HasCompletedOnboarding,
+		OnboardingStep:         output.User.OnboardingStep,
 		CreatedAt:              output.User.CreatedAt.Format(time.RFC3339),
 	}
 
@@ -353,6 +356,7 @@ func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 		MaxArticles:            maxArticles,
 		ArticlesUsed:           output.User.ArticlesUsed,
 		HasCompletedOnboarding: output.User.HasCompletedOnboarding,
+		OnboardingStep:         output.User.OnboardingStep,
 		CreatedAt:              output.User.CreatedAt.Format(time.RFC3339),
 	}
 

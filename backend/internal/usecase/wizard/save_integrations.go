@@ -51,6 +51,7 @@ type SaveIntegrationsOutput struct {
 // SaveIntegrationsUseCase implementa o caso de uso
 type SaveIntegrationsUseCase struct {
 	integrationRepo repository.IntegrationRepository
+	userRepo        repository.UserRepository
 	cryptoService   *util.CryptoService
 	wpClient        *wordpress.Client // Será nil, criamos no execute
 }
@@ -58,10 +59,12 @@ type SaveIntegrationsUseCase struct {
 // NewSaveIntegrationsUseCase cria nova instância
 func NewSaveIntegrationsUseCase(
 	integrationRepo repository.IntegrationRepository,
+	userRepo repository.UserRepository,
 	cryptoService *util.CryptoService,
 ) *SaveIntegrationsUseCase {
 	return &SaveIntegrationsUseCase{
 		integrationRepo: integrationRepo,
+		userRepo:        userRepo,
 		cryptoService:   cryptoService,
 	}
 }
@@ -113,6 +116,17 @@ func (uc *SaveIntegrationsUseCase) Execute(ctx context.Context, input SaveIntegr
 
 	// 6. Retornar resultado
 	output.Success = len(output.Errors) == 0 || (output.WordPressConnected || output.SearchConsoleConnected || output.AnalyticsConnected)
+
+	// 7. Atualizar onboarding_step do usuário para 4 (integrations completo)
+	if output.WordPressConnected {
+		user, err := uc.userRepo.FindByID(ctx, userID)
+		if err == nil && user != nil && user.OnboardingStep < 4 {
+			user.OnboardingStep = 4
+			if err := uc.userRepo.Update(ctx, user); err != nil {
+				log.Warn().Err(err).Msg("SaveIntegrationsUseCase: erro ao atualizar onboarding_step")
+			}
+		}
+	}
 
 	log.Info().
 		Str("user_id", input.UserID).

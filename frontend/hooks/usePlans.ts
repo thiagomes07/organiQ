@@ -42,6 +42,13 @@ const plansApi = {
     );
     return data;
   },
+
+  confirmFreePlan: async (): Promise<{ success: boolean; onboardingStep: number }> => {
+    const { data } = await api.post<{ success: boolean; onboardingStep: number }>(
+      "/payments/confirm-free-plan"
+    );
+    return data;
+  },
 };
 
 // ============================================
@@ -101,7 +108,7 @@ export function usePlans() {
       console.error('Checkout error:', error);
       // Se backend indicou que o usuário já possui o plano, redireciona
       if (axios.isAxiosError(error) && (error as any).response?.data?.error === "user_already_has_plan") {
-          const target = hasCompletedOnboarding ? "/app" : "/app/onboarding";
+        const target = hasCompletedOnboarding ? "/app" : "/app/onboarding";
         console.log('User already has plan, redirecting (internal) to:', target);
         try {
           router.replace(target);
@@ -175,7 +182,7 @@ export function usePlans() {
   const selectPlan = async (planId: string) => {
     console.log('selectPlan called with planId:', planId);
     console.log('hasCompletedOnboarding:', hasCompletedOnboarding);
-    
+
     // Always fetch current plan to ensure we have latest data
     let currentPlan;
     try {
@@ -187,8 +194,17 @@ export function usePlans() {
       // Proceed to checkout anyway, let backend handle it
     }
 
-    // Se já é o plano atual, avançar no fluxo de onboarding/dashboard
+    // Se já é o plano atual, confirmar seleção e avançar para onboarding
     if (currentPlan?.id === planId) {
+      console.log('Plan already selected, confirming free plan selection...');
+      try {
+        // Chamar endpoint para atualizar onboarding_step
+        await plansApi.confirmFreePlan();
+        console.log('Free plan confirmed, redirecting to onboarding');
+      } catch (error) {
+        console.warn('Failed to confirm free plan, proceeding anyway:', error);
+      }
+
       const target = hasCompletedOnboarding ? "/app" : "/app/onboarding";
       console.log('Redirecting (internal) to:', target);
       try {

@@ -137,11 +137,12 @@ type CustomClaims struct {
 	Sub                    string `json:"sub"` // user_id
 	Email                  string `json:"email"`
 	HasCompletedOnboarding bool   `json:"hasCompletedOnboarding"`
+	OnboardingStep         int    `json:"onboardingStep"`
 	jwt.RegisteredClaims
 }
 
 // GenerateAccessToken cria um access token (15 minutos)
-func (cs *CryptoService) GenerateAccessToken(userID uuid.UUID, email string, hasCompletedOnboarding bool) (string, error) {
+func (cs *CryptoService) GenerateAccessToken(userID uuid.UUID, email string, hasCompletedOnboarding bool, onboardingStep int) (string, error) {
 	now := time.Now()
 	expiresAt := now.Add(15 * time.Minute)
 
@@ -149,6 +150,7 @@ func (cs *CryptoService) GenerateAccessToken(userID uuid.UUID, email string, has
 		Sub:                    userID.String(),
 		Email:                  email,
 		HasCompletedOnboarding: hasCompletedOnboarding,
+		OnboardingStep:         onboardingStep,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(now),

@@ -145,9 +145,8 @@ export function LocationFields({
 
   const unitsCountLabel = useMemo(() => {
     if (fields.length === 0) return "Nenhuma unidade adicionada ainda";
-    return `${fields.length} ${
-      fields.length === 1 ? "unidade cadastrada" : "unidades cadastradas"
-    }`;
+    return `${fields.length} ${fields.length === 1 ? "unidade cadastrada" : "unidades cadastradas"
+      }`;
   }, [fields.length]);
 
   const handleAddUnit = () => {
@@ -207,6 +206,22 @@ export function LocationFields({
     }
   };
 
+  const setUnitIsPrimary = (index: number) => {
+    fields.forEach((_, idx) => {
+      const isCurrent = idx === index;
+      const currentVal = watch(`location.units.${idx}.isPrimary`);
+
+      // Se clicou na que já é primary, desmarca (toggle off). 
+      // Se não, marca a atual e desmarca as outras.
+      const newValue = isCurrent ? !currentVal : false;
+
+      setValue(`location.units.${idx}.isPrimary`, newValue, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    });
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -220,6 +235,9 @@ export function LocationFields({
           </Label>
           <p className="text-sm font-onest text-[var(--color-primary-dark)]/60 mt-1">
             Informe onde seu negócio atua para otimizar o SEO local
+          </p>
+          <p className="text-xs text-[var(--color-primary-dark)]/50 italic mt-0.5">
+            Se seu negócio é 100% digital, preencha apenas o País.
           </p>
         </div>
       </div>
@@ -407,13 +425,17 @@ export function LocationFields({
               const unitState = watch(`location.units.${index}.state` as const);
               const unitCanShowState = Boolean(unitCountry);
               const unitCanShowCity = Boolean(unitState);
+              const isPrimary = watch(`location.units.${index}.isPrimary` as const);
 
               return (
                 <div
                   key={field.id}
                   className={cn(
-                    "border-l-4 border-[var(--color-primary-purple)] rounded-[var(--radius-md)] bg-white p-4 space-y-3",
-                    "shadow-sm hover:shadow-md transition-shadow animate-in slide-in-from-bottom-2 duration-200"
+                    "border-l-4 rounded-[var(--radius-md)] bg-white p-4 space-y-3",
+                    "shadow-sm hover:shadow-md transition-shadow animate-in slide-in-from-bottom-2 duration-200",
+                    isPrimary
+                      ? "border-l-[var(--color-warning)] ring-1 ring-[var(--color-warning)]"
+                      : "border-l-[var(--color-primary-purple)]"
                   )}
                 >
                   {/* Header */}
@@ -423,15 +445,46 @@ export function LocationFields({
                       <span className="text-sm font-semibold font-all-round text-[var(--color-primary-dark)]">
                         Unidade {index + 1}
                       </span>
+                      {isPrimary && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-warning)] bg-[var(--color-warning)]/10 px-2 py-0.5 rounded-full">
+                          Principal
+                        </span>
+                      )}
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setRemoveIndex(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setUnitIsPrimary(index)}
+                        title={isPrimary ? "Desmarcar como principal" : "Marcar como principal"}
+                        className={cn(
+                          "hover:bg-[var(--color-warning)]/10",
+                          isPrimary && "text-[var(--color-warning)]"
+                        )}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill={isPrimary ? "currentColor" : "none"}
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="h-4 w-4"
+                        >
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setRemoveIndex(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Nome da Unidade (opcional) */}
@@ -476,7 +529,7 @@ export function LocationFields({
                   {/* Estado */}
                   {unitCanShowState && (
                     <div className="space-y-2">
-                      <Label>Estado (opcional)</Label>
+                      <Label required>Estado</Label>
                       {unitIsBrazil ? (
                         <Select
                           value={unitState || ""}
@@ -518,7 +571,7 @@ export function LocationFields({
                   {/* Cidade */}
                   {unitCanShowCity && (
                     <div className="space-y-2">
-                      <Label>Cidade (opcional)</Label>
+                      <Label required>Cidade</Label>
                       {unitIsBrazil ? (
                         <Select
                           value={

@@ -283,8 +283,9 @@ func processPaymentSucceeded(
 	// 4. Resetar contador de artigos usados
 	user.ArticlesUsed = 0
 
-	// 5. Resetar onboarding flag (usuário pode refazer wizard se necessário)
+	// 5. Resetar onboarding flag e definir step=1 para iniciar wizard de configuração
 	user.HasCompletedOnboarding = false
+	user.OnboardingStep = 1
 
 	// 6. Salvar mudanças do usuário
 	if err := userRepo.Update(ctx, user); err != nil {

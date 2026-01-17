@@ -42,10 +42,11 @@ export function BusinessInfoForm({
     setValue,
     control,
     formState: { errors },
-  } = useForm<BusinessInput>({
+  } = useForm({
     resolver: zodResolver(businessSchema),
     defaultValues: {
       description: "",
+      primaryObjective: "leads", // Adding explicit default to prevent 'undefined' issues
       hasBlog: false,
       blogUrls: [],
       articleCount: 1,
@@ -56,11 +57,13 @@ export function BusinessInfoForm({
         hasMultipleUnits: false,
         units: [],
       },
+      siteUrl: "", // This matches the "" literal or optional string
       ...defaultValues,
-    },
+    } as any, // Cast defaultValues to any to bypass strict partial checks during init
   });
 
   const watchPrimaryObjective = watch("primaryObjective");
+  const watchDescription = watch("description");
   const watchHasBlog = watch("hasBlog");
   const watchArticleCount = watch("articleCount");
   const blogUrls = watch("blogUrls") ?? [];
@@ -77,8 +80,12 @@ export function BusinessInfoForm({
     }
   };
 
+  const onFormError = (errors: any) => {
+    console.log('[BusinessInfoForm] Validation errors:', errors);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-6">
       {/* Descrição do Negócio */}
       <div className="space-y-2">
         <Label htmlFor="description" required>
@@ -89,7 +96,8 @@ export function BusinessInfoForm({
           placeholder="Ex: Somos uma agência de marketing digital especializada em pequenas empresas..."
           maxLength={500}
           showCount
-          error={errors.description?.message}
+          value={watchDescription}
+          error={errors.description?.message as string}
           {...register("description")}
         />
         <p className="text-xs text-[var(--color-primary-dark)]/60 font-onest">
@@ -110,7 +118,7 @@ export function BusinessInfoForm({
               setValue("primaryObjective", value as "leads" | "sales" | "branding")
             }
           >
-            <SelectTrigger error={errors.primaryObjective?.message}>
+            <SelectTrigger error={errors.primaryObjective?.message as string}>
               <SelectValue placeholder="Selecione seu objetivo principal" />
             </SelectTrigger>
             <SelectContent>
@@ -135,7 +143,7 @@ export function BusinessInfoForm({
                 setValue("secondaryObjective", value as "leads" | "sales" | "branding" | undefined)
               }
             >
-              <SelectTrigger error={errors.secondaryObjective?.message}>
+              <SelectTrigger error={errors.secondaryObjective?.message as string}>
                 <SelectValue placeholder="Selecione um objetivo secundário (opcional)" />
               </SelectTrigger>
               <SelectContent>
@@ -169,9 +177,9 @@ export function BusinessInfoForm({
         <Label htmlFor="siteUrl">URL do seu site (opcional)</Label>
         <Input
           id="siteUrl"
-          type="url"
-          placeholder="https://seusite.com.br"
-          error={errors.siteUrl?.message}
+          type="text"
+          placeholder="seusite.com.br"
+          error={errors.siteUrl?.message as string}
           {...register("siteUrl")}
         />
       </div>
@@ -196,12 +204,12 @@ export function BusinessInfoForm({
         <div className="space-y-2">
           <Label>URLs do blog</Label>
           <div className="space-y-2">
-            {blogUrls.map((_, index) => (
+            {blogUrls.map((_: string, index: number) => (
               <div key={index} className="flex gap-2">
                 <Input
-                  type="url"
+                  type="text"
                   placeholder="https://seusite.com.br/blog"
-                  error={errors.blogUrls?.[index]?.message}
+                  error={(errors.blogUrls as any)?.[index]?.message as string}
                   {...register(`blogUrls.${index}` as const)}
                 />
                 <Button
@@ -211,7 +219,7 @@ export function BusinessInfoForm({
                   onClick={() =>
                     setValue(
                       "blogUrls",
-                      blogUrls.filter((__, i) => i !== index)
+                      blogUrls.filter((__: string, i: number) => i !== index)
                     )
                   }
                 >
@@ -248,7 +256,7 @@ export function BusinessInfoForm({
         />
         {errors.articleCount && (
           <p className="text-xs text-[var(--color-error)] font-onest">
-            {errors.articleCount.message}
+            {errors.articleCount.message as string}
           </p>
         )}
       </div>
@@ -279,7 +287,7 @@ export function BusinessInfoForm({
         </p>
         {errors.brandFile && (
           <p className="text-xs text-[var(--color-error)] font-onest">
-            {errors.brandFile.message}
+            {errors.brandFile.message as string}
           </p>
         )}
       </div>

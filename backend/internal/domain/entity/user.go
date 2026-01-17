@@ -18,6 +18,7 @@ type User struct {
 	PlanID                 uuid.UUID `gorm:"index;column:plan_id" json:"planId"`
 	ArticlesUsed           int       `gorm:"column:articles_used" json:"articlesUsed"`
 	HasCompletedOnboarding bool      `gorm:"column:has_completed_onboarding" json:"hasCompletedOnboarding"`
+	OnboardingStep         int       `gorm:"column:onboarding_step;default:0" json:"onboardingStep"`
 	CreatedAt              time.Time `gorm:"column:created_at" json:"createdAt"`
 	UpdatedAt              time.Time `gorm:"column:updated_at" json:"updatedAt"`
 }

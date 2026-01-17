@@ -121,7 +121,7 @@ func (uc *RegisterUserUseCase) Execute(ctx context.Context, input RegisterUserIn
 	}
 
 	// 8. Gerar access token
-	accessToken, err := uc.crypto.GenerateAccessToken(user.ID, user.Email, false) // Novo usuário não completou onboarding
+	accessToken, err := uc.crypto.GenerateAccessToken(user.ID, user.Email, false, 0) // Novo usuário: onboarding_step = 0
 	if err != nil {
 		return nil, err
 	}

@@ -63,7 +63,7 @@ func (uc *LoginUserUseCase) Execute(ctx context.Context, input LoginUserInput) (
 		return nil, errors.New("invalid_credentials")
 	}
 
-	accessToken, err := uc.crypto.GenerateAccessToken(user.ID, user.Email, user.HasCompletedOnboarding)
+	accessToken, err := uc.crypto.GenerateAccessToken(user.ID, user.Email, user.HasCompletedOnboarding, user.OnboardingStep)
 	if err != nil {
 		return nil, err
 	}

@@ -40,16 +40,19 @@ type SaveBusinessOutput struct {
 // SaveBusinessUseCase implementa o caso de uso
 type SaveBusinessUseCase struct {
 	businessRepo   repository.BusinessRepository
+	userRepo       repository.UserRepository
 	storageService storage.StorageService
 }
 
 // NewSaveBusinessUseCase cria nova instância
 func NewSaveBusinessUseCase(
 	businessRepo repository.BusinessRepository,
+	userRepo repository.UserRepository,
 	storageService storage.StorageService,
 ) *SaveBusinessUseCase {
 	return &SaveBusinessUseCase{
 		businessRepo:   businessRepo,
+		userRepo:       userRepo,
 		storageService: storageService,
 	}
 }
@@ -210,6 +213,16 @@ func (uc *SaveBusinessUseCase) Execute(ctx context.Context, input SaveBusinessIn
 		}
 
 		profileID = profile.ID.String()
+	}
+
+	// 7. Atualizar onboarding_step do usuário para 2 (business completo)
+	user, err := uc.userRepo.FindByID(ctx, userID)
+	if err == nil && user != nil && user.OnboardingStep < 2 {
+		user.OnboardingStep = 2
+		if err := uc.userRepo.Update(ctx, user); err != nil {
+			log.Warn().Err(err).Msg("SaveBusinessUseCase: erro ao atualizar onboarding_step")
+			// Não falhar a operação por isso
+		}
 	}
 
 	log.Info().Str("user_id", input.UserID).Str("profile_id", profileID).Msg("SaveBusinessUseCase bem-sucedido")

@@ -11,6 +11,7 @@ export interface User {
   maxArticles: number;
   articlesUsed: number;
   hasCompletedOnboarding: boolean;
+  onboardingStep: number;
   createdAt: string;
 }
 

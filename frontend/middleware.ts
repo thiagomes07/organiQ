@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server'
 
 type JwtPayload = {
   hasCompletedOnboarding?: boolean
+  onboardingStep?: number
 }
 
 function safeParseJwt(token: string): JwtPayload | null {
@@ -36,26 +37,39 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Se tem token, aplica regras de onboarding somente em rotas protegidas
+  // Se tem token, aplica regras de onboarding baseadas no step atual
   if (token && !isPublicPath) {
     const payload = safeParseJwt(token)
-    const hasCompletedOnboarding = payload?.hasCompletedOnboarding
+    const hasCompletedOnboarding = payload?.hasCompletedOnboarding ?? false
+    const onboardingStep = payload?.onboardingStep ?? 0
 
     // Token inválido/inesperado: trata como não autenticado
     if (typeof hasCompletedOnboarding !== 'boolean') {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    if (!hasCompletedOnboarding) {
-      const allowed = ['/app/planos', '/app/onboarding']
-      if (!allowed.includes(pathname)) {
-        return NextResponse.redirect(new URL('/app/planos', request.url))
-      }
-    } else {
+    // Lógica de roteamento baseada no onboarding_step:
+    // step 0: Sem plano pago -> /app/planos
+    // step 1-4: No meio do onboarding -> /app/onboarding
+    // step 5 (hasCompletedOnboarding=true): Completo -> /app/materias
+
+    if (hasCompletedOnboarding || onboardingStep >= 5) {
       // Onboarding completo: evita voltar para telas de onboarding
       const blocked = ['/app/planos', '/app/onboarding']
       if (blocked.includes(pathname)) {
         return NextResponse.redirect(new URL('/app/materias', request.url))
+      }
+    } else if (onboardingStep >= 1 && onboardingStep <= 4) {
+      // Usuário no meio do onboarding (já pagou plano)
+      const allowed = ['/app/onboarding']
+      if (!allowed.includes(pathname)) {
+        return NextResponse.redirect(new URL('/app/onboarding', request.url))
+      }
+    } else {
+      // step 0: Usuário ainda não escolheu/pagou plano
+      const allowed = ['/app/planos', '/app/onboarding']
+      if (!allowed.includes(pathname)) {
+        return NextResponse.redirect(new URL('/app/planos', request.url))
       }
     }
   }

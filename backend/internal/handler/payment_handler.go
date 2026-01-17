@@ -280,6 +280,68 @@ func (h *PaymentHandler) CreatePortalSession(w http.ResponseWriter, r *http.Requ
 }
 
 // ============================================
+// POST /api/payments/confirm-free-plan
+// ============================================
+
+// ConfirmFreePlanResponse response body
+type ConfirmFreePlanResponse struct {
+	Success        bool   `json:"success"`
+	OnboardingStep int    `json:"onboardingStep"`
+	Message        string `json:"message"`
+}
+
+// ConfirmFreePlan confirma seleção do plano Free e avança para onboarding
+// Este endpoint existe porque o plano Free não passa pelo checkout de pagamento,
+// então precisamos de uma forma de atualizar o onboarding_step manualmente.
+func (h *PaymentHandler) ConfirmFreePlan(w http.ResponseWriter, r *http.Request) {
+	log.Debug().Msg("PaymentHandler ConfirmFreePlan iniciado")
+
+	// 1. Extrair user_id do context
+	userID := middleware.GetUserIDFromContext(r)
+	if userID == "" {
+		log.Warn().Msg("ConfirmFreePlan: usuário não autenticado")
+		util.RespondError(w, http.StatusUnauthorized, "unauthorized", "Usuário não autenticado")
+		return
+	}
+
+	// 2. Buscar usuário
+	user, err := h.userRepo.FindByID(r.Context(), util.MustParseUUID(userID))
+	if err != nil || user == nil {
+		log.Error().Err(err).Msg("ConfirmFreePlan: erro ao buscar usuário")
+		util.RespondError(w, http.StatusNotFound, "user_not_found", "Usuário não encontrado")
+		return
+	}
+
+	// 3. Verificar se o usuário tem um plano Free (pela lógica, novo usuário começa com Free)
+	plan, err := h.planRepo.FindByID(r.Context(), user.PlanID)
+	if err != nil || plan == nil {
+		log.Error().Err(err).Msg("ConfirmFreePlan: erro ao buscar plano")
+		util.RespondError(w, http.StatusInternalServerError, "plan_not_found", "Erro ao buscar plano")
+		return
+	}
+
+	// 4. Atualizar onboarding_step para 1 se ainda estiver em 0
+	if user.OnboardingStep < 1 {
+		user.OnboardingStep = 1
+		if err := h.userRepo.Update(r.Context(), user); err != nil {
+			log.Error().Err(err).Msg("ConfirmFreePlan: erro ao atualizar usuário")
+			util.RespondError(w, http.StatusInternalServerError, "update_failed", "Erro ao atualizar usuário")
+			return
+		}
+		log.Info().Str("user_id", userID).Msg("ConfirmFreePlan: onboarding_step atualizado para 1")
+	}
+
+	// 5. Responder
+	response := ConfirmFreePlanResponse{
+		Success:        true,
+		OnboardingStep: user.OnboardingStep,
+		Message:        "Plano Free confirmado. Pronto para iniciar o onboarding.",
+	}
+
+	util.RespondJSON(w, http.StatusOK, response)
+}
+
+// ============================================
 // GET /api/payments/status/{sessionId}
 // ============================================
 

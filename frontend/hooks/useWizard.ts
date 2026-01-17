@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -92,6 +92,25 @@ const wizardApi = {
     const { data } = await api.post("/articles/publish", payload);
     return data;
   },
+
+  // Buscar dados existentes do wizard
+  getWizardData: async (): Promise<{
+    onboardingStep: number;
+    business?: {
+      description: string;
+      primaryObjective: string;
+      secondaryObjective?: string;
+      location?: { country: string; state: string; city: string; hasMultipleUnits?: boolean };
+      siteUrl?: string;
+      hasBlog: boolean;
+      blogUrls?: string[];
+    };
+    competitors?: string[];
+    hasIntegration: boolean;
+  }> => {
+    const { data } = await api.get("/wizard/data");
+    return data;
+  },
 };
 
 // ============================================
@@ -110,6 +129,7 @@ export function useWizard(isOnboarding: boolean = true) {
 
   // Local state para wizard steps
   const [currentStep, setCurrentStep] = useState(1);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [businessData, setBusinessData] = useState<BusinessInput | null>(null);
   const [competitorData, setCompetitorData] = useState<CompetitorsInput | null>(
     null
@@ -118,6 +138,83 @@ export function useWizard(isOnboarding: boolean = true) {
   const [articleIdeas, setArticleIdeas] = useState<ArticleIdea[]>([]);
   const [jobId, setJobId] = useState<string | null>(null);
   const [articleCount, setArticleCount] = useState(1);
+
+  // ============================================
+  // FETCH EXISTING DATA
+  // ============================================
+
+  const wizardDataQuery = useQuery({
+    queryKey: ["wizard-data"],
+    queryFn: wizardApi.getWizardData,
+    enabled: isOnboarding,
+    staleTime: 0, // Sempre considerar dados como stale
+    gcTime: 0, // Não cachear
+    refetchOnMount: 'always', // Sempre buscar ao montar
+    refetchOnWindowFocus: false,
+  });
+
+  // Inicializar states baseado nos dados existentes
+  useEffect(() => {
+    if (wizardDataQuery.isSuccess && wizardDataQuery.data && !isInitialized) {
+      const data = wizardDataQuery.data;
+
+      console.log('[useWizard] Inicializando com dados:', data);
+
+      // Converter onboardingStep (1-5) para currentStep do wizard (1-4)
+      // onboarding_step 1 = precisa preencher business (wizard step 1)
+      // onboarding_step 2 = business feito, preencher competitors (wizard step 2)
+      // onboarding_step 3 = competitors feito, preencher integrations (wizard step 3)
+      // onboarding_step 4 = integrations feito, aprovar artigos (wizard step 4)
+      const wizardStep = Math.min(Math.max(data.onboardingStep, 1), 4);
+      console.log('[useWizard] Definindo currentStep para:', wizardStep);
+      setCurrentStep(wizardStep);
+
+      // Preencher dados do business se existir
+      if (data.business) {
+        console.log('[useWizard] Preenchendo businessData:', data.business);
+        // Filtrar blogUrls inválidas (backend pode retornar strings como "[]")
+        const validBlogUrls = (data.business.blogUrls || []).filter((url: string) => {
+          if (!url || url === '[]' || url === '""' || url.trim() === '') return false;
+          try {
+            new URL(url.startsWith('http') ? url : `https://${url}`);
+            return true;
+          } catch {
+            return false;
+          }
+        });
+
+        setBusinessData({
+          description: data.business.description,
+          primaryObjective: data.business.primaryObjective as 'leads' | 'sales' | 'branding',
+          secondaryObjective: data.business.secondaryObjective as 'leads' | 'sales' | 'branding' | undefined,
+          location: data.business.location ? { ...data.business.location, hasMultipleUnits: data.business.location.hasMultipleUnits || false } : { country: 'Brasil', state: '', city: '', hasMultipleUnits: false },
+          siteUrl: data.business.siteUrl || '',
+          hasBlog: data.business.hasBlog && validBlogUrls.length > 0, // Se não tem URLs válidas, não tem blog
+          blogUrls: validBlogUrls,
+          articleCount: 1, // Default para 1 (mínimo) - não é persistido no banco
+        });
+      }
+
+      // Preencher dados de competitors se existir
+      if (data.competitors && data.competitors.length > 0) {
+        console.log('[useWizard] Preenchendo competitorData:', data.competitors);
+        setCompetitorData({
+          competitorUrls: data.competitors,
+        });
+      }
+
+      // Preencher dados de integrations se existir
+      if (data.hasIntegration) {
+        console.log('[useWizard] Preenchendo integrationsData');
+        setIntegrationsData({
+          wordpress: { siteUrl: '', username: '', appPassword: '' }, // Dados sensiveis nao sao retornados
+        });
+      }
+
+      setIsInitialized(true);
+      console.log('[useWizard] Inicialização completa');
+    }
+  }, [wizardDataQuery.isSuccess, wizardDataQuery.data, isInitialized]);
 
   // ============================================
   // STEP 1: BUSINESS INFO
@@ -343,6 +440,7 @@ export function useWizard(isOnboarding: boolean = true) {
     integrationsData,
     articleIdeas,
     articleCount,
+    isInitialized,
 
     // Navigation
     goToStep,
@@ -358,6 +456,7 @@ export function useWizard(isOnboarding: boolean = true) {
     setArticleCount,
 
     // Loading states
+    isLoadingWizardData: wizardDataQuery.isLoading,
     isSubmittingBusiness: businessMutation.isPending,
     isSubmittingCompetitors: competitorsMutation.isPending,
     isSubmittingIntegrations: integrationsMutation.isPending,

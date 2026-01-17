@@ -260,6 +260,13 @@ func (uc *PublishArticlesUseCase) Execute(ctx context.Context, input PublishArti
 		// Não falhar a operação, apenas logar
 	}
 
+	// 10. Marcar onboarding como completo (step=5)
+	if !user.HasCompletedOnboarding {
+		user.HasCompletedOnboarding = true
+		user.OnboardingStep = 5
+		log.Info().Str("user_id", input.UserID).Msg("PublishArticlesUseCase: onboarding completado")
+	}
+
 	if err := uc.userRepo.Update(ctx, user); err != nil {
 		log.Error().Err(err).Msg("PublishArticlesUseCase: erro ao atualizar usuário")
 		// Não falhar a operação
