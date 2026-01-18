@@ -20,6 +20,7 @@ import (
 type MockQueueDependencies struct {
 	ArticleJobRepo  repository.ArticleJobRepository
 	ArticleIdeaRepo repository.ArticleIdeaRepository
+	ArticleRepo     repository.ArticleRepository
 	ProcessingDelay time.Duration // Opcional: padrão 30s
 }
 
@@ -110,6 +111,7 @@ func NewQueueServiceWithMock(cfg *config.Config, deps MockQueueDependencies) (Qu
 		return NewMockQueue(MockQueueConfig{
 			ArticleJobRepo:  deps.ArticleJobRepo,
 			ArticleIdeaRepo: deps.ArticleIdeaRepo,
+			ArticleRepo:     deps.ArticleRepo,
 			ProcessingDelay: deps.ProcessingDelay,
 		}), nil
 	}

@@ -4,13 +4,12 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { HelpCircle, Check, Calendar } from "lucide-react";
-import * as Accordion from "@radix-ui/react-accordion";
+import { HelpCircle, Check, Calendar, Eye, EyeOff } from "lucide-react";
 import {
   profileUpdateSchema,
-  integrationsUpdateSchema,
+  passwordUpdateSchema,
   type ProfileUpdateInput,
-  type IntegrationsUpdateInput,
+  type PasswordUpdateInput,
 } from "@/lib/validations";
 import { usePlans } from "@/hooks/usePlans";
 import { useUser, useAuthStore } from "@/store/authStore";
@@ -45,7 +44,10 @@ export default function ContaPage() {
   const { updateUser } = useAuthStore();
   const { currentPlan, openPortal, isOpeningPortal } = usePlans();
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [isSavingIntegrations, setIsSavingIntegrations] = useState(false);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Profile Form
   const profileForm = useForm<ProfileUpdateInput>({
@@ -62,29 +64,6 @@ export default function ContaPage() {
     }
   }, [user?.name, profileForm]);
 
-  // Integrations Form
-  const integrationsForm = useForm<IntegrationsUpdateInput>({
-    resolver: zodResolver(integrationsUpdateSchema),
-    defaultValues: {
-      wordpress: {
-        siteUrl: "",
-        username: "",
-        appPassword: "",
-      },
-      searchConsole: {
-        enabled: false,
-      },
-      analytics: {
-        enabled: false,
-      },
-    },
-  });
-
-  const watchSearchConsoleEnabled = integrationsForm.watch(
-    "searchConsole.enabled"
-  );
-  const watchAnalyticsEnabled = integrationsForm.watch("analytics.enabled");
-
   const handleUpdateProfile = async (data: ProfileUpdateInput) => {
     setIsSavingProfile(true);
     try {
@@ -99,18 +78,31 @@ export default function ContaPage() {
     }
   };
 
-  const handleUpdateIntegrations = async (data: IntegrationsUpdateInput) => {
-    setIsSavingIntegrations(true);
+  // Password Form
+  const passwordForm = useForm<PasswordUpdateInput>({
+    resolver: zodResolver(passwordUpdateSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
+
+  const handleUpdatePassword = async (data: PasswordUpdateInput) => {
+    setIsSavingPassword(true);
     try {
-      await api.patch("/account/integrations", data);
-      toast.success("Integrações atualizadas com sucesso!");
+      await api.patch("/account/password", data);
+      toast.success("Senha atualizada com sucesso!");
+      passwordForm.reset();
     } catch (error) {
       const message = getErrorMessage(error);
-      toast.error(message || "Erro ao atualizar integrações");
+      toast.error(message || "Erro ao atualizar senha");
     } finally {
-      setIsSavingIntegrations(false);
+      setIsSavingPassword(false);
     }
   };
+
+
 
   const usagePercentage = user
     ? (user.articlesUsed / user.maxArticles) * 100
@@ -174,6 +166,111 @@ export default function ContaPage() {
                 disabled={isSavingProfile}
               >
                 Salvar Alterações
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+
+        {/* Card 3: Alterar Senha */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Alterar Senha</CardTitle>
+            <CardDescription>Atualize sua senha de acesso</CardDescription>
+          </CardHeader>
+
+          <form onSubmit={passwordForm.handleSubmit(handleUpdatePassword)}>
+            <CardContent className="space-y-4">
+              {/* Senha Atual */}
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword" required>
+                  Senha Atual
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="currentPassword"
+                    type={showCurrentPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    error={passwordForm.formState.errors.currentPassword?.message}
+                    {...passwordForm.register("currentPassword")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-primary-dark)]/40 hover:text-[var(--color-primary-dark)]/70 transition-colors"
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Nova Senha */}
+              <div className="space-y-2">
+                <Label htmlFor="newPassword" required>
+                  Nova Senha
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="newPassword"
+                    type={showNewPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    error={passwordForm.formState.errors.newPassword?.message}
+                    {...passwordForm.register("newPassword")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-primary-dark)]/40 hover:text-[var(--color-primary-dark)]/70 transition-colors"
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirmar Senha */}
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" required>
+                  Confirmar Nova Senha
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    error={passwordForm.formState.errors.confirmPassword?.message}
+                    {...passwordForm.register("confirmPassword")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-primary-dark)]/40 hover:text-[var(--color-primary-dark)]/70 transition-colors"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </CardContent>
+
+            <CardFooter>
+              <Button
+                type="submit"
+                variant="outline"
+                className="w-full sm:w-auto"
+                isLoading={isSavingPassword}
+                disabled={isSavingPassword}
+              >
+                Atualizar Senha
               </Button>
             </CardFooter>
           </form>
@@ -243,226 +340,6 @@ export default function ContaPage() {
           </CardFooter>
         </Card>
       </div>
-
-      {/* Card 3: Integrações (Full Width) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Integrações</CardTitle>
-          <CardDescription>
-            Configure suas conexões com WordPress e Google
-          </CardDescription>
-        </CardHeader>
-
-        <form
-          onSubmit={integrationsForm.handleSubmit(handleUpdateIntegrations)}
-        >
-          <CardContent>
-            <Accordion.Root type="multiple" className="space-y-4">
-              {/* WordPress */}
-              <Accordion.Item value="wordpress">
-                <div className="border-2 border-[var(--color-primary-purple)] rounded-[var(--radius-md)] overflow-hidden">
-                  <Accordion.Header>
-                    <Accordion.Trigger className="flex items-center justify-between w-full p-4 hover:bg-[var(--color-primary-purple)]/5 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-[var(--color-primary-purple)]/10">
-                          <span className="text-xl">🔌</span>
-                        </div>
-                        <div className="text-left">
-                          <h4 className="text-base font-semibold font-all-round text-[var(--color-primary-dark)]">
-                            WordPress
-                          </h4>
-                          <p className="text-xs font-onest text-[var(--color-primary-dark)]/60">
-                            Publicação automática de matérias
-                          </p>
-                        </div>
-                      </div>
-                      <Check className="h-5 w-5 text-[var(--color-success)]" />
-                    </Accordion.Trigger>
-                  </Accordion.Header>
-
-                  <Accordion.Content className="p-4 pt-0 space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="wp-siteUrl">URL do site</Label>
-                      <Input
-                        id="wp-siteUrl"
-                        type="url"
-                        placeholder="https://seusite.com.br"
-                        {...integrationsForm.register("wordpress.siteUrl")}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="wp-username">Nome de usuário</Label>
-                      <Input
-                        id="wp-username"
-                        type="text"
-                        placeholder="seu_usuario"
-                        {...integrationsForm.register("wordpress.username")}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="wp-appPassword">
-                          Senha de aplicativo
-                        </Label>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <button
-                              type="button"
-                              className="text-[var(--color-primary-teal)] hover:text-[var(--color-primary-purple)]"
-                            >
-                              <HelpCircle className="h-4 w-4" />
-                            </button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Como obter a senha?</DialogTitle>
-                              <DialogDescription className="space-y-2 text-left">
-                                <p>1. WordPress → Usuários → Perfil</p>
-                                <p>
-                                  2. Role até &ldquo;Senhas de aplicativo&rdquo;
-                                </p>
-                                <p>3. Adicione uma nova senha</p>
-                                <p>4. Copie e cole aqui</p>
-                              </DialogDescription>
-                            </DialogHeader>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                      <Input
-                        id="wp-appPassword"
-                        type="password"
-                        placeholder="••••••••••••"
-                        {...integrationsForm.register("wordpress.appPassword")}
-                      />
-                    </div>
-                  </Accordion.Content>
-                </div>
-              </Accordion.Item>
-
-              {/* Google Search Console */}
-              <Accordion.Item value="searchConsole">
-                <div
-                  className={cn(
-                    "border-2 rounded-[var(--radius-md)] overflow-hidden",
-                    watchSearchConsoleEnabled
-                      ? "border-[var(--color-primary-teal)]"
-                      : "border-[var(--color-border)]"
-                  )}
-                >
-                  <Accordion.Header>
-                    <Accordion.Trigger className="flex items-center justify-between w-full p-4 hover:bg-[var(--color-primary-teal)]/5">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-[var(--color-primary-teal)]/10 flex items-center justify-center">
-                          <span className="text-xl">📊</span>
-                        </div>
-                        <div className="text-left">
-                          <h4 className="text-base font-semibold font-all-round text-[var(--color-primary-dark)]">
-                            Google Search Console
-                          </h4>
-                          <p className="text-xs font-onest text-[var(--color-primary-dark)]/60">
-                            Análise de palavras-chave
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {watchSearchConsoleEnabled && (
-                          <Check className="h-5 w-5 text-[var(--color-success)]" />
-                        )}
-                        <input
-                          type="checkbox"
-                          {...integrationsForm.register(
-                            "searchConsole.enabled"
-                          )}
-                          onClick={(e) => e.stopPropagation()}
-                          className="h-4 w-4 rounded"
-                        />
-                      </div>
-                    </Accordion.Trigger>
-                  </Accordion.Header>
-
-                  {watchSearchConsoleEnabled && (
-                    <Accordion.Content className="p-4 pt-0">
-                      <Input
-                        type="url"
-                        placeholder="https://seusite.com.br"
-                        {...integrationsForm.register(
-                          "searchConsole.propertyUrl"
-                        )}
-                      />
-                    </Accordion.Content>
-                  )}
-                </div>
-              </Accordion.Item>
-
-              {/* Google Analytics */}
-              <Accordion.Item value="analytics">
-                <div
-                  className={cn(
-                    "border-2 rounded-[var(--radius-md)] overflow-hidden",
-                    watchAnalyticsEnabled
-                      ? "border-[var(--color-primary-teal)]"
-                      : "border-[var(--color-border)]"
-                  )}
-                >
-                  <Accordion.Header>
-                    <Accordion.Trigger className="flex items-center justify-between w-full p-4 hover:bg-[var(--color-primary-teal)]/5">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-[var(--color-primary-teal)]/10 flex items-center justify-center">
-                          <span className="text-xl">📈</span>
-                        </div>
-                        <div className="text-left">
-                          <h4 className="text-base font-semibold font-all-round text-[var(--color-primary-dark)]">
-                            Google Analytics
-                          </h4>
-                          <p className="text-xs font-onest text-[var(--color-primary-dark)]/60">
-                            Análise de tráfego
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {watchAnalyticsEnabled && (
-                          <Check className="h-5 w-5 text-[var(--color-success)]" />
-                        )}
-                        <input
-                          type="checkbox"
-                          {...integrationsForm.register("analytics.enabled")}
-                          onClick={(e) => e.stopPropagation()}
-                          className="h-4 w-4 rounded"
-                        />
-                      </div>
-                    </Accordion.Trigger>
-                  </Accordion.Header>
-
-                  {watchAnalyticsEnabled && (
-                    <Accordion.Content className="p-4 pt-0">
-                      <Input
-                        type="text"
-                        placeholder="G-XXXXXXXXXX"
-                        {...integrationsForm.register(
-                          "analytics.measurementId"
-                        )}
-                      />
-                    </Accordion.Content>
-                  )}
-                </div>
-              </Accordion.Item>
-            </Accordion.Root>
-          </CardContent>
-
-          <CardFooter>
-            <Button
-              type="submit"
-              variant="primary"
-              isLoading={isSavingIntegrations}
-              disabled={isSavingIntegrations}
-            >
-              Atualizar Integrações
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
     </div>
   );
 }

@@ -156,14 +156,15 @@ func (aj *ArticleJob) IsComplete() bool {
 
 // ArticleIdea representa uma ideia de artigo gerada
 type ArticleIdea struct {
-	ID        uuid.UUID  `gorm:"primaryKey" json:"id"`
-	UserID    uuid.UUID  `gorm:"index;column:user_id" json:"userId"`
-	JobID     uuid.UUID  `gorm:"index;column:job_id" json:"jobId"`
-	Title     string     `gorm:"type:text;column:title" json:"title"`
-	Summary   string     `gorm:"type:text;column:summary" json:"summary"`
-	Approved  bool       `gorm:"index;column:approved" json:"approved"`
-	Feedback  *string    `gorm:"column:feedback" json:"feedback"`
-	CreatedAt time.Time  `gorm:"column:created_at" json:"createdAt"`
+	ID          uuid.UUID `gorm:"primaryKey" json:"id"`
+	UserID      uuid.UUID `gorm:"index;column:user_id" json:"userId"`
+	JobID       uuid.UUID `gorm:"index;column:job_id" json:"jobId"`
+	Title       string    `gorm:"type:text;column:title" json:"title"`
+	Summary     string    `gorm:"type:text;column:summary" json:"summary"`
+	Approved    bool      `gorm:"index;column:approved" json:"approved"`
+	Feedback    *string   `gorm:"column:feedback" json:"feedback"`
+	GeneratedAt time.Time `gorm:"index;column:generated_at" json:"generatedAt"`
+	CreatedAt   time.Time `gorm:"column:created_at" json:"createdAt"`
 }
 
 // TableName especifica o nome da tabela

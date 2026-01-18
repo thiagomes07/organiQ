@@ -1,8 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { HelpCircle, Check } from 'lucide-react'
+import { HelpCircle, Check, Eye, EyeOff } from 'lucide-react'
 import * as Accordion from '@radix-ui/react-accordion'
 import { integrationsSchema, type IntegrationsInput } from '@/lib/validations'
 import { Button } from '@/components/ui/button'
@@ -16,6 +17,7 @@ interface IntegrationsFormProps {
   onBack: () => void
   isLoading?: boolean
   defaultValues?: Partial<IntegrationsInput>
+  hasGeneratedIdeas?: boolean
 }
 
 export function IntegrationsForm({
@@ -23,6 +25,7 @@ export function IntegrationsForm({
   onBack,
   isLoading,
   defaultValues,
+  hasGeneratedIdeas,
 }: IntegrationsFormProps) {
   const {
     register,
@@ -49,6 +52,8 @@ export function IntegrationsForm({
       },
     },
   })
+
+  const [showPassword, setShowPassword] = useState(false)
 
   const watchSearchConsoleEnabled = watch('searchConsole.enabled')
   const watchAnalyticsEnabled = watch('analytics.enabled')
@@ -151,13 +156,27 @@ export function IntegrationsForm({
                     </DialogContent>
                   </Dialog>
                 </div>
-                <Input
-                  id="wp-appPassword"
-                  type="password"
-                  placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
-                  error={errors.wordpress?.appPassword?.message}
-                  {...register('wordpress.appPassword')}
-                />
+                <div className="relative">
+                  <Input
+                    id="wp-appPassword"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+                    autoComplete="new-password"
+                    error={errors.wordpress?.appPassword?.message}
+                    {...register('wordpress.appPassword')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-primary-dark)]/40 hover:text-[var(--color-primary-dark)]/70 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
             </Accordion.Content>
           </div>
@@ -167,8 +186,8 @@ export function IntegrationsForm({
         <Accordion.Item value="searchConsole">
           <div className={cn(
             "border-2 rounded-[var(--radius-md)] overflow-hidden transition-colors",
-            watchSearchConsoleEnabled 
-              ? "border-[var(--color-primary-teal)]" 
+            watchSearchConsoleEnabled
+              ? "border-[var(--color-primary-teal)]"
               : "border-[var(--color-border)]"
           )}>
             <Accordion.Header>
@@ -227,8 +246,8 @@ export function IntegrationsForm({
         <Accordion.Item value="analytics">
           <div className={cn(
             "border-2 rounded-[var(--radius-md)] overflow-hidden transition-colors",
-            watchAnalyticsEnabled 
-              ? "border-[var(--color-primary-teal)]" 
+            watchAnalyticsEnabled
+              ? "border-[var(--color-primary-teal)]"
               : "border-[var(--color-border)]"
           )}>
             <Accordion.Header>
@@ -302,7 +321,7 @@ export function IntegrationsForm({
           isLoading={isLoading}
           disabled={isLoading}
         >
-          Gerar Ideias
+          {hasGeneratedIdeas ? 'Ver Ideias' : 'Gerar Ideias'}
         </Button>
       </div>
     </form>

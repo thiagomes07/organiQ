@@ -42,7 +42,12 @@ const wizardApi = {
     return response;
   },
 
-  generateIdeas: async (): Promise<{ jobId: string }> => {
+  generateIdeas: async (): Promise<{
+    jobId: string;
+    regenerationsRemaining?: number;
+    regenerationsLimit?: number;
+    nextRegenerationAt?: string;
+  }> => {
     const { data } = await api.post("/wizard/generate-ideas");
     return data;
   },
@@ -68,10 +73,10 @@ const wizardApi = {
   getPublishStatus: async (
     jobId: string
   ): Promise<{
-    status: "processing" | "completed" | "failed";
+    status: "processing" | "completed" | "failed" | "queued";
     published?: number;
     total?: number;
-    error?: string;
+    errorMessage?: string;
   }> => {
     const { data } = await api.get(`/wizard/publish-status/${jobId}`);
     return data;
@@ -146,6 +151,12 @@ export function useWizard(isOnboarding: boolean = true) {
   const [jobId, setJobId] = useState<string | null>(null);
   const [articleCount, setArticleCount] = useState(1);
 
+  // Estados de regeneração
+  const [hasGeneratedIdeas, setHasGeneratedIdeas] = useState(false);
+  const [regenerationsRemaining, setRegenerationsRemaining] = useState<number>(0);
+  const [regenerationsLimit, setRegenerationsLimit] = useState<number>(0);
+  const [nextRegenerationAt, setNextRegenerationAt] = useState<string | null>(null);
+
   // ============================================
   // FETCH EXISTING DATA
   // ============================================
@@ -168,10 +179,6 @@ export function useWizard(isOnboarding: boolean = true) {
       console.log('[useWizard] Inicializando com dados:', data);
 
       // Converter onboardingStep (1-5) para currentStep do wizard (1-4)
-      // onboarding_step 1 = precisa preencher business (wizard step 1)
-      // onboarding_step 2 = business feito, preencher competitors (wizard step 2)
-      // onboarding_step 3 = competitors feito, preencher integrations (wizard step 3)
-      // onboarding_step 4 = integrations feito, aprovar artigos (wizard step 4)
       const wizardStep = Math.min(Math.max(data.onboardingStep, 1), 4);
       console.log('[useWizard] Definindo currentStep para:', wizardStep);
       setCurrentStep(wizardStep);
@@ -179,7 +186,6 @@ export function useWizard(isOnboarding: boolean = true) {
       // Preencher dados do business se existir
       if (data.business) {
         console.log('[useWizard] Preenchendo businessData:', data.business);
-        // Filtrar blogUrls inválidas (backend pode retornar strings como "[]")
         const validBlogUrls = (data.business.blogUrls || []).filter((url: string) => {
           if (!url || url === '[]' || url === '""' || url.trim() === '') return false;
           try {
@@ -196,31 +202,28 @@ export function useWizard(isOnboarding: boolean = true) {
           secondaryObjective: data.business.secondaryObjective as 'leads' | 'sales' | 'branding' | undefined,
           location: data.business.location ? { ...data.business.location, hasMultipleUnits: data.business.location.hasMultipleUnits || false } : { country: 'Brasil', state: '', city: '', hasMultipleUnits: false },
           siteUrl: data.business.siteUrl || '',
-          hasBlog: data.business.hasBlog && validBlogUrls.length > 0, // Se não tem URLs válidas, não tem blog
+          hasBlog: data.business.hasBlog && validBlogUrls.length > 0,
           blogUrls: validBlogUrls,
-          articleCount: 1, // Default para 1 (mínimo) - não é persistido no banco
+          articleCount: 1,
         });
       }
 
       // Preencher dados de competitors se existir
       if (data.competitors && data.competitors.length > 0) {
-        console.log('[useWizard] Preenchendo competitorData:', data.competitors);
         setCompetitorData({
           competitorUrls: data.competitors,
         });
       }
 
-      // Preencher dados de integrations se existir
+      // Preencher dados de integrations
       if (data.hasIntegration) {
-        console.log('[useWizard] Preenchendo integrationsData');
         setIntegrationsData({
-          wordpress: { siteUrl: '', username: '', appPassword: '' }, // Dados sensiveis nao sao retornados
+          wordpress: { siteUrl: '', username: '', appPassword: '' },
         });
       }
 
-      // Preencher ideias de artigos pendentes se existir
+      // Preencher ideias de artigos pendentes
       if (data.pendingIdeas && data.pendingIdeas.length > 0) {
-        console.log('[useWizard] Preenchendo articleIdeas:', data.pendingIdeas.length, 'ideias');
         setArticleIdeas(data.pendingIdeas.map(idea => ({
           id: idea.id,
           title: idea.title,
@@ -229,6 +232,25 @@ export function useWizard(isOnboarding: boolean = true) {
           feedback: idea.feedback || '',
         })));
       }
+
+      // Preencher estados de regeneração (se disponíveis no tipo retornado pela API, que atualizamos no backend)
+      // Ajuste de tipagem necessário aqui pois o tipo retornado pela API no hook pode não estar atualizado
+      // Vamos assumir que os dados vêm no objeto data, casting if needed
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const extendedData = data as any;
+      if (typeof extendedData.hasGeneratedIdeas === 'boolean') {
+        setHasGeneratedIdeas(extendedData.hasGeneratedIdeas);
+      }
+      if (typeof extendedData.regenerationsRemaining === 'number') {
+        setRegenerationsRemaining(extendedData.regenerationsRemaining);
+      }
+      if (typeof extendedData.regenerationsLimit === 'number') {
+        setRegenerationsLimit(extendedData.regenerationsLimit);
+      }
+      if (extendedData.nextRegenerationAt) {
+        setNextRegenerationAt(extendedData.nextRegenerationAt);
+      }
+
 
       setIsInitialized(true);
       console.log('[useWizard] Inicialização completa');
@@ -259,7 +281,7 @@ export function useWizard(isOnboarding: boolean = true) {
     mutationFn: wizardApi.submitCompetitors,
     onSuccess: (_, variables) => {
       setCompetitorData(variables);
-      setCurrentStep(isOnboarding ? 3 : 999); // Se não é onboarding, pula para loading
+      setCurrentStep(isOnboarding ? 3 : 999);
       if (!isOnboarding) {
         generateIdeasMutation.mutate({ competitorUrls: variables.competitorUrls });
       }
@@ -278,8 +300,15 @@ export function useWizard(isOnboarding: boolean = true) {
     mutationFn: wizardApi.submitIntegrations,
     onSuccess: (_, variables) => {
       setIntegrationsData(variables);
-      setCurrentStep(999); // Vai para loading
-      generateIdeasMutation.mutate({ competitorUrls: competitorData?.competitorUrls });
+      // Se já gerou ideias antes, vai direto para o passo de aprovação
+      if (hasGeneratedIdeas) {
+        console.log('[useWizard] Ideias já geradas, indo para aprovação (Step 4)');
+        setCurrentStep(4);
+      } else {
+        // Se não, gera novas
+        setCurrentStep(999); // Vai para loading
+        generateIdeasMutation.mutate({ competitorUrls: competitorData?.competitorUrls });
+      }
     },
     onError: (error) => {
       const message = getErrorMessage(error);
@@ -292,23 +321,67 @@ export function useWizard(isOnboarding: boolean = true) {
   // ============================================
 
   const generateIdeasMutation = useMutation({
-    mutationFn: async (variables?: { competitorUrls?: string[] }) => {
+    mutationFn: async (variables?: { competitorUrls?: string[], isRegeneration?: boolean }) => {
       if (isOnboarding) {
-        return wizardApi.generateIdeas();
+        // Atualizar api helper para aceitar isRegeneration
+        const { data } = await api.post("/wizard/generate-ideas", {
+          isRegeneration: variables?.isRegeneration
+        });
+        return data as { jobId: string, regenerationsRemaining?: number, regenerationsLimit?: number, nextRegenerationAt?: string };
       }
       return wizardApi.generateNewIdeas({
         articleCount,
         competitorUrls: variables?.competitorUrls,
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       ideasStartedAtRef.current = Date.now();
       setJobId(data.jobId);
+
+      // Se foi regeneração, atualizar stats
+      if (variables?.isRegeneration) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const result = data as any;
+        // Se a API retornou stats atualizados, usar
+        if (typeof result.regenerationsRemaining === 'number') {
+          setRegenerationsRemaining(result.regenerationsRemaining);
+        }
+        if (typeof result.regenerationsLimit === 'number') {
+          setRegenerationsLimit(result.regenerationsLimit);
+        }
+        if (result.nextRegenerationAt) {
+          setNextRegenerationAt(result.nextRegenerationAt);
+        } else {
+          setNextRegenerationAt(null);
+        }
+      }
     },
-    onError: (error) => {
-      const message = getErrorMessage(error);
-      toast.error(message || "Erro ao gerar ideias");
-      setCurrentStep(isOnboarding ? 3 : 2); // Volta para step anterior
+    onError: (error: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const err = error as any; // Cast safely for now to access response
+      const message = getErrorMessage(err);
+
+      // Checar erro de limite (429)
+      if (err?.response?.status === 429) {
+        toast.error("Limite de regeneração excedido. Tente novamente mais tarde.");
+        const responseData = err.response.data;
+        if (responseData) {
+          if (typeof responseData.regenerationsRemaining === 'number') setRegenerationsRemaining(responseData.regenerationsRemaining);
+          if (typeof responseData.regenerationsLimit === 'number') setRegenerationsLimit(responseData.regenerationsLimit);
+          if (responseData.nextRegenerationAt) setNextRegenerationAt(responseData.nextRegenerationAt);
+        }
+      } else {
+        toast.error(message || "Erro ao gerar ideias");
+      }
+
+      setCurrentStep(isOnboarding ? 4 : 2); // Volta para step 4 (approval) se falhar regeneração, ou 2 se business
+      if (isOnboarding && currentStep === 999 && !hasGeneratedIdeas) {
+        // Se estava no loading inicial (step 3 -> 4) e falhou, volta para 3
+        setCurrentStep(3);
+      } else if (isOnboarding && currentStep === 999 && hasGeneratedIdeas) {
+        // Se era regeneração (999 mas já tinha ideias, ou vindo do step 4)
+        setCurrentStep(4);
+      }
     },
   });
 
@@ -324,31 +397,60 @@ export function useWizard(isOnboarding: boolean = true) {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchInterval: (query) => {
-      if (ideasStartedAtRef.current && Date.now() - ideasStartedAtRef.current > IDEAS_TIMEOUT_MS) {
-        toast.error("Tempo limite ao gerar ideias. Tente novamente.");
-        setCurrentStep(isOnboarding ? 3 : 2);
+      if (query.state.data?.status === "completed" || query.state.data?.status === "failed") {
         return false;
       }
-      if (query.state.data?.status === "completed") {
-        // Só atualizar articleIdeas se estiver vazio (primeira vez)
-        // Isso preserva as aprovações do usuário
-        if (articleIdeas.length === 0) {
-          console.log('[useWizard] Setting initial article ideas from API');
-          setArticleIdeas(query.state.data.ideas || []);
-        } else {
-          console.log('[useWizard] Skipping article ideas update - already loaded');
-        }
-        setCurrentStep(isOnboarding ? 4 : 3); // Vai para aprovação
-        return false;
-      }
-      if (query.state.data?.status === "failed") {
-        toast.error(query.state.data.error || "Erro ao gerar ideias");
-        setCurrentStep(isOnboarding ? 3 : 2);
-        return false;
-      }
-      return 3000; // Poll a cada 3 segundos
+      return 3000;
     },
   });
+
+  // Monitorar status das ideias
+  useEffect(() => {
+    if (currentStep !== 999 || !ideasStatusQuery.data) return;
+
+    const { status, ideas, error } = ideasStatusQuery.data;
+
+    if (status === "completed") {
+      // Sempre atualizar as ideias com as novas geradas, mantendo as aprovadas anteriores
+      console.log('[useWizard] Ideas generation completed, updating ideas');
+
+      setArticleIdeas((prev) => {
+        // Manter apenas as aprovadas da lista anterior (pois o backend deleta as não aprovadas ao regenerar)
+        const previouslyApproved = prev.filter(idea => idea.approved);
+        // Combinar com as novas ideias
+        // Filtrar novas ideias para garantir que não haja duplicatas (embora improvável com UUIDs novos)
+        const newIdeas = ideas || [];
+        const existingIds = new Set(previouslyApproved.map(i => i.id));
+        const uniqueNewIdeas = newIdeas.filter(i => !existingIds.has(i.id));
+
+        return [...previouslyApproved, ...uniqueNewIdeas];
+      });
+
+      setHasGeneratedIdeas(true); // Marcar que temos ideias geradas
+      setCurrentStep(isOnboarding ? 4 : 3);
+    } else if (status === "failed") {
+      toast.error(error || "Erro ao gerar ideias");
+      setCurrentStep(isOnboarding ? 4 : 2); // Se falhar regeneração, volta para aprovação
+      if (isOnboarding && !hasGeneratedIdeas) setCurrentStep(3); // Se era primeira vez, volta para integrações
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, ideasStatusQuery.data?.status]);
+
+  // Monitorar timeout das ideias
+  useEffect(() => {
+    if (currentStep !== 999) return;
+
+    const checkTimeout = () => {
+      if (ideasStartedAtRef.current && Date.now() - ideasStartedAtRef.current > IDEAS_TIMEOUT_MS) {
+        toast.error("Tempo limite ao gerar ideias. Tente novamente.");
+        setCurrentStep(isOnboarding ? 4 : 2);
+        if (isOnboarding && !hasGeneratedIdeas) setCurrentStep(3);
+      }
+    };
+
+    const timer = setInterval(checkTimeout, 1000);
+    return () => clearInterval(timer);
+  }, [currentStep, isOnboarding, IDEAS_TIMEOUT_MS, hasGeneratedIdeas]);
 
   // ============================================
   // STEP 4: PUBLISH
@@ -377,36 +479,48 @@ export function useWizard(isOnboarding: boolean = true) {
     queryKey: ["publish-status", jobId],
     queryFn: () => wizardApi.getPublishStatus(jobId!),
     enabled: !!jobId && currentStep === 1000,
+    refetchOnWindowFocus: false,
     refetchInterval: (query) => {
-      if (publishStartedAtRef.current && Date.now() - publishStartedAtRef.current > PUBLISH_TIMEOUT_MS) {
-        toast.error("Tempo limite ao publicar matérias. Tente novamente.");
-        setCurrentStep(isOnboarding ? 4 : 3);
-        return false;
-      }
-      if (query.state.data?.status === "completed") {
-        // Atualizar usuário
-        if (isOnboarding) {
-          updateUser({ hasCompletedOnboarding: true });
-        }
-
-        // Invalidar cache de artigos
-        queryClient.invalidateQueries({ queryKey: ["articles"] });
-
-        toast.success(
-          `${query.state.data.published} matérias publicadas com sucesso!`
-        );
-        router.push("/app/materias");
-        return false;
-      }
-      if (query.state.data?.status === "failed") {
-        toast.error(query.state.data.error || "Erro ao publicar matérias");
-        setCurrentStep(isOnboarding ? 4 : 3);
+      if (query.state.data?.status === "completed" || query.state.data?.status === "failed") {
         return false;
       }
       return 3000;
     },
-    refetchOnWindowFocus: false,
   });
+
+  // Monitorar status da publicação
+  useEffect(() => {
+    if (currentStep !== 1000 || !publishStatusQuery.data) return;
+
+    const { status, published, errorMessage } = publishStatusQuery.data;
+
+    if (status === "completed") {
+      if (isOnboarding) {
+        updateUser({ hasCompletedOnboarding: true });
+      }
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+      toast.success(`${published} matérias publicadas com sucesso!`);
+      router.push("/app/materias");
+    } else if (status === "failed") {
+      toast.error(errorMessage || "Erro ao publicar matérias");
+      setCurrentStep(isOnboarding ? 4 : 3);
+    }
+  }, [currentStep, publishStatusQuery.data, isOnboarding, updateUser, queryClient, router]);
+
+  // Monitorar timeout da publicação
+  useEffect(() => {
+    if (currentStep !== 1000) return;
+
+    const checkTimeout = () => {
+      if (publishStartedAtRef.current && Date.now() - publishStartedAtRef.current > PUBLISH_TIMEOUT_MS) {
+        toast.error("Tempo limite ao publicar matérias. Tente novamente.");
+        setCurrentStep(isOnboarding ? 4 : 3);
+      }
+    };
+
+    const timer = setInterval(checkTimeout, 1000);
+    return () => clearInterval(timer);
+  }, [currentStep, isOnboarding, PUBLISH_TIMEOUT_MS]);
 
   // ============================================
   // NAVIGATION HELPERS
@@ -447,6 +561,11 @@ export function useWizard(isOnboarding: boolean = true) {
     publishMutation.mutate(payload);
   };
 
+  const regenerateIdeas = () => {
+    setCurrentStep(999);
+    generateIdeasMutation.mutate({ isRegeneration: true });
+  };
+
   const updateArticleIdea = (id: string, updates: Partial<ArticleIdea>) => {
     setArticleIdeas((prev) =>
       prev.map((idea) => (idea.id === id ? { ...idea, ...updates } : idea))
@@ -456,6 +575,9 @@ export function useWizard(isOnboarding: boolean = true) {
   // ============================================
   // RETURN
   // ============================================
+
+  const isGeneratingIdeas = generateIdeasMutation.isPending || ideasStatusQuery.isFetching;
+  const isPublishing = publishMutation.isPending || publishStatusQuery.isFetching;
 
   return {
     // Current state
@@ -467,6 +589,12 @@ export function useWizard(isOnboarding: boolean = true) {
     articleCount,
     isInitialized,
 
+    // Regeneration State
+    hasGeneratedIdeas,
+    regenerationsRemaining,
+    regenerationsLimit,
+    nextRegenerationAt,
+
     // Navigation
     goToStep,
     nextStep,
@@ -477,6 +605,7 @@ export function useWizard(isOnboarding: boolean = true) {
     submitCompetitors,
     submitIntegrations,
     publishArticles,
+    regenerateIdeas,
     updateArticleIdea,
     setArticleCount,
 
@@ -485,9 +614,8 @@ export function useWizard(isOnboarding: boolean = true) {
     isSubmittingBusiness: businessMutation.isPending,
     isSubmittingCompetitors: competitorsMutation.isPending,
     isSubmittingIntegrations: integrationsMutation.isPending,
-    isGeneratingIdeas:
-      generateIdeasMutation.isPending || ideasStatusQuery.isFetching,
-    isPublishing: publishMutation.isPending || publishStatusQuery.isFetching,
+    isGeneratingIdeas,
+    isPublishing,
 
     // Progress info
     ideasProgress: ideasStatusQuery.data?.status,
@@ -495,7 +623,9 @@ export function useWizard(isOnboarding: boolean = true) {
 
     // Computed
     approvedCount: articleIdeas.filter((idea) => idea.approved).length,
+    allApproved: articleIdeas.length > 0 && articleIdeas.every((idea) => idea.approved),
     canPublish: articleIdeas.some((idea) => idea.approved),
+    canRegenerateIdeas: regenerationsRemaining > 0 && !isGeneratingIdeas && !isPublishing && !(articleIdeas.length > 0 && articleIdeas.every((idea) => idea.approved)),
     isLoading: currentStep === 999 || currentStep === 1000,
   };
 }

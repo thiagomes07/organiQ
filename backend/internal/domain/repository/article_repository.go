@@ -87,6 +87,9 @@ type ArticleIdeaRepository interface {
 	// DeleteByJobID deleta todas as ideias de um job
 	DeleteByJobID(ctx context.Context, jobID uuid.UUID) error
 
+	// DeleteUnapprovedByUserID deleta todas as ideias não aprovadas de um usuário
+	DeleteUnapprovedByUserID(ctx context.Context, userID uuid.UUID) error
+
 	// ApproveMultiple marca múltiplas ideias como aprovadas
 	ApproveMultiple(ctx context.Context, ids []uuid.UUID) error
 
@@ -95,6 +98,12 @@ type ArticleIdeaRepository interface {
 
 	// CountByUserID retorna total de ideias de um usuário
 	CountByUserID(ctx context.Context, userID uuid.UUID) (int, error)
+
+	// CountApprovedByUserID retorna total de ideias aprovadas de um usuário
+	CountApprovedByUserID(ctx context.Context, userID uuid.UUID) (int, error)
+
+	// CountGenerationsInLastHour conta quantos jobs de geração o usuário executou na última hora
+	CountGenerationsInLastHour(ctx context.Context, userID uuid.UUID) (int, error)
 }
 
 // ============================================

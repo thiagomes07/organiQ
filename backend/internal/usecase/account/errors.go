@@ -12,4 +12,6 @@ var (
 	ErrNoIntegrationPayload      = errors.New("no_integration_payload")
 	ErrWordPressConfigIncomplete = errors.New("wordpress_config_incomplete")
 	ErrAnalyticsConfigIncomplete = errors.New("analytics_config_incomplete")
+	ErrInvalidPassword           = errors.New("invalid_password")
+	ErrIncorrectPassword         = errors.New("incorrect_password")
 )

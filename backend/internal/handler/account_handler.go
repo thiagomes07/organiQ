@@ -22,6 +22,7 @@ type AccountHandler struct {
 	getAccountUC         *account.GetAccountUseCase
 	updateProfileUC      *account.UpdateProfileUseCase
 	updateIntegrationsUC *account.UpdateIntegrationsUseCase
+	updatePasswordUC     *account.UpdatePasswordUseCase
 	getPlanUC            *account.GetPlanUseCase
 }
 
@@ -30,12 +31,14 @@ func NewAccountHandler(
 	getAccountUC *account.GetAccountUseCase,
 	updateProfileUC *account.UpdateProfileUseCase,
 	updateIntegrationsUC *account.UpdateIntegrationsUseCase,
+	updatePasswordUC *account.UpdatePasswordUseCase,
 	getPlanUC *account.GetPlanUseCase,
 ) *AccountHandler {
 	return &AccountHandler{
 		getAccountUC:         getAccountUC,
 		updateProfileUC:      updateProfileUC,
 		updateIntegrationsUC: updateIntegrationsUC,
+		updatePasswordUC:     updatePasswordUC,
 		getPlanUC:            getPlanUC,
 	}
 }
@@ -89,6 +92,12 @@ type UpdateProfileRequest struct {
 // UpdateProfileResponse resposta do update de perfil.
 type UpdateProfileResponse struct {
 	User AccountUserResponse `json:"user"`
+}
+
+// UpdatePasswordRequest payload para alteração de senha.
+type UpdatePasswordRequest struct {
+	CurrentPassword string `json:"currentPassword"`
+	NewPassword     string `json:"newPassword"`
 }
 
 // UpdateIntegrationsRequest payload de integrações.
@@ -187,6 +196,46 @@ func (h *AccountHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	util.RespondOK(w, UpdateProfileResponse{User: buildAccountUserResponse(output.User)})
+}
+
+// UpdatePassword atualiza a senha do usuário.
+func (h *AccountHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r)
+	if userID == "" {
+		util.RespondUnauthorized(w, "Usuário não autenticado")
+		return
+	}
+
+	var req UpdatePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		requestLogger(r).Warn().Err(err).Msg("invalid password payload")
+		util.RespondBadRequest(w, "Payload inválido")
+		return
+	}
+
+	if req.CurrentPassword == "" || req.NewPassword == "" {
+		util.RespondBadRequest(w, "Senha atual e nova senha são obrigatórias")
+		return
+	}
+
+	if len(req.NewPassword) < 6 {
+		util.RespondBadRequest(w, "A nova senha deve ter no mínimo 6 caracteres")
+		return
+	}
+
+	err := h.updatePasswordUC.Execute(r.Context(), account.UpdatePasswordInput{
+		UserID:          userID,
+		CurrentPassword: req.CurrentPassword,
+		NewPassword:     req.NewPassword,
+	})
+
+	if err != nil {
+		requestLogger(r).Warn().Err(err).Msg("update password failed")
+		handleAccountError(w, err)
+		return
+	}
+
+	util.RespondNoContent(w)
 }
 
 // UpdateIntegrations atualiza configurações de integrações.
@@ -372,6 +421,10 @@ func handleAccountError(w http.ResponseWriter, err error) {
 		util.RespondBadRequest(w, "Configuração do WordPress incompleta")
 	case errors.Is(err, account.ErrAnalyticsConfigIncomplete):
 		util.RespondBadRequest(w, "Configuração do Analytics incompleta")
+	case errors.Is(err, account.ErrInvalidPassword):
+		util.RespondBadRequest(w, "Senha inválida")
+	case errors.Is(err, account.ErrIncorrectPassword):
+		util.RespondError(w, http.StatusForbidden, "incorrect_password", "Senha atual incorreta")
 	default:
 		util.RespondInternalServerError(w)
 	}

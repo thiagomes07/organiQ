@@ -326,6 +326,22 @@ export const profileUpdateSchema = z.object({
     .regex(/^[a-zA-ZÀ-ÿ\s]+$/, "Nome deve conter apenas letras"),
 });
 
+export const passwordUpdateSchema = z
+  .object({
+    currentPassword: z.string().min(1, "A senha atual é obrigatória"),
+    newPassword: z
+      .string()
+      .min(6, "A nova senha deve ter no mínimo 6 caracteres")
+      .max(100, "Senha muito longa"),
+    confirmPassword: z.string().min(1, "Confirme a nova senha"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "As senhas não coincidem",
+    path: ["confirmPassword"],
+  });
+
+export type PasswordUpdateInput = z.infer<typeof passwordUpdateSchema>;
+
 export const integrationsUpdateSchema = z.object({
   wordpress: z
     .object({

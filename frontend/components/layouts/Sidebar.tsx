@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { FileText, PlusCircle, Settings, LogOut, ChevronDown } from "lucide-react";
+import { FileText, PlusCircle, Settings, LogOut, ChevronDown, Building2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,7 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  requiresOnboarding?: boolean; // Se true, fica bloqueado até completar onboarding
 }
 
 const navItems: NavItem[] = [
@@ -18,11 +19,19 @@ const navItems: NavItem[] = [
     label: "Gerar Matérias",
     href: "/app/novo",
     icon: PlusCircle,
+    requiresOnboarding: true,
   },
   {
     label: "Minhas Matérias",
     href: "/app/materias",
     icon: FileText,
+    requiresOnboarding: true,
+  },
+  {
+    label: "Configurações do Negócio",
+    href: "/app/configuracoes",
+    icon: Building2,
+    requiresOnboarding: true,
   },
   {
     label: "Minha Conta",
@@ -123,11 +132,8 @@ export function Sidebar() {
           const Icon = item.icon;
           const isActive = pathname === item.href;
 
-          // Lock logic: Bloquear rotas de matérias se não completou onboarding
-          const isLocked = !user?.hasCompletedOnboarding && (
-            item.href === '/app/materias' ||
-            item.href === '/app/novo'
-          );
+          // Lock logic: Bloquear rotas que requerem onboarding se não completou
+          const isLocked = !user?.hasCompletedOnboarding && item.requiresOnboarding;
 
           if (isLocked) {
             return (

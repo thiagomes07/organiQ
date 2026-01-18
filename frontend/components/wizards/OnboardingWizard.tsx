@@ -57,6 +57,13 @@ export function OnboardingWizard() {
     isPublishing,
     approvedCount,
     canPublish,
+    regenerationsRemaining,
+    regenerationsLimit,
+    nextRegenerationAt,
+    hasGeneratedIdeas,
+    regenerateIdeas,
+    canRegenerateIdeas,
+    allApproved,
   } = useWizard(true) // true = isOnboarding
 
   // Estado para modal de confirmação
@@ -123,24 +130,48 @@ export function OnboardingWizard() {
         {/* Footer Actions */}
         <Card>
           <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
-            <div className="flex items-center gap-4 flex-wrap justify-center sm:justify-start">
-              <div className="flex items-center gap-2">
-                <FileCheck className="h-5 w-5 text-[var(--color-success)]" />
-                <span className="text-sm font-medium font-onest text-[var(--color-primary-dark)]">
-                  {approvedCount} matéria{approvedCount !== 1 ? 's' : ''} aprovada{approvedCount !== 1 ? 's' : ''}
-                </span>
-              </div>
-              {feedbackCount > 0 && (
+            <div className="flex flex-col sm:items-start gap-1 w-full sm:w-auto">
+              <div className="flex items-center gap-4 flex-wrap justify-center sm:justify-start">
                 <div className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-[var(--color-primary-purple)]" />
-                  <span className="text-sm font-medium font-onest text-[var(--color-primary-dark)]/70">
-                    {feedbackCount} feedback{feedbackCount !== 1 ? 's' : ''} adicionado{feedbackCount !== 1 ? 's' : ''}
+                  <FileCheck className="h-5 w-5 text-[var(--color-success)]" />
+                  <span className="text-sm font-medium font-onest text-[var(--color-primary-dark)]">
+                    {approvedCount} matéria{approvedCount !== 1 ? 's' : ''} aprovada{approvedCount !== 1 ? 's' : ''}
                   </span>
+                </div>
+                {feedbackCount > 0 && (
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-[var(--color-primary-purple)]" />
+                    <span className="text-sm font-medium font-onest text-[var(--color-primary-dark)]/70">
+                      {feedbackCount} feedback{feedbackCount !== 1 ? 's' : ''} adicionado{feedbackCount !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {/* Regenerate Info */}
+              {!allApproved && (
+                <div className="text-xs text-[var(--color-primary-dark)]/60 font-onest mt-1">
+                  Regenerações: {regenerationsRemaining}/{regenerationsLimit}
+                  {!canRegenerateIdeas && nextRegenerationAt && (
+                    <span className="ml-2 text-[var(--color-warning)]">
+                      (Disponível em {new Date(nextRegenerationAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                    </span>
+                  )}
                 </div>
               )}
             </div>
 
-            <div className="flex items-center gap-3">
+
+            <div className="flex items-center gap-3 flex-wrap justify-center sm:justify-end">
+              {!allApproved && (
+                <Button
+                  variant="outline"
+                  onClick={regenerateIdeas}
+                  disabled={!canRegenerateIdeas || isGeneratingIdeas}
+                  className="text-[var(--color-primary-purple)] border-[var(--color-primary-purple)] hover:bg-[var(--color-primary-purple)]/5"
+                >
+                  Gerar Novas Ideias
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={previousStep}
@@ -203,6 +234,10 @@ export function OnboardingWizard() {
               <p className="text-sm font-onest text-[var(--color-primary-dark)]/70">
                 As matérias serão escritas com IA e publicadas automaticamente no seu blog WordPress.
                 Este processo pode levar alguns minutos.
+                <br />
+                <span className="text-xs text-[var(--color-warning)] mt-2 block">
+                  Nota: As ideias não aprovadas serão descartadas.
+                </span>
               </p>
             </div>
 
@@ -279,6 +314,7 @@ export function OnboardingWizard() {
               onBack={previousStep}
               isLoading={isSubmittingIntegrations}
               defaultValues={integrationsData || undefined}
+              hasGeneratedIdeas={hasGeneratedIdeas}
             />
           )}
         </CardContent>

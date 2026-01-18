@@ -28,6 +28,7 @@ type SaveBusinessInput struct {
 	BrandFile          io.Reader // File reader
 	BrandFileName      string    // Original filename
 	BrandFileSize      int64     // Tamanho do arquivo
+	RemoveBrandFile    bool      // Se true, remove o arquivo de marca existente
 }
 
 // SaveBusinessOutput dados de saída
@@ -167,8 +168,14 @@ func (uc *SaveBusinessUseCase) Execute(ctx context.Context, input SaveBusinessIn
 		existingProfile.SiteURL = input.SiteURL
 		existingProfile.HasBlog = input.HasBlog
 		existingProfile.BlogURLs = input.BlogURLs
+		// Lógica de atualização do BrandFileURL:
+		// 1. Se há novo arquivo, usar a nova URL
+		// 2. Se removeBrandFile é true, definir como nil
+		// 3. Caso contrário, manter o valor existente
 		if brandFileURL != nil {
 			existingProfile.BrandFileURL = brandFileURL
+		} else if input.RemoveBrandFile {
+			existingProfile.BrandFileURL = nil
 		}
 		existingProfile.UpdatedAt = time.Now()
 

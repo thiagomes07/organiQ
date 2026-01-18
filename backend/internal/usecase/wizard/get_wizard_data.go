@@ -40,16 +40,23 @@ type PendingIdeaOutput struct {
 
 // GetWizardDataOutput dados de saída
 type GetWizardDataOutput struct {
-	OnboardingStep int                 `json:"onboardingStep"`
-	Business       *BusinessDataOutput `json:"business,omitempty"`
-	Competitors    []string            `json:"competitors,omitempty"`
-	HasIntegration bool                `json:"hasIntegration"`
-	PendingIdeas   []PendingIdeaOutput `json:"pendingIdeas,omitempty"`
+	OnboardingStep         int                 `json:"onboardingStep"`
+	Business               *BusinessDataOutput `json:"business,omitempty"`
+	Competitors            []string            `json:"competitors,omitempty"`
+	HasIntegration         bool                `json:"hasIntegration"`
+	PendingIdeas           []PendingIdeaOutput `json:"pendingIdeas,omitempty"`
+	HasGeneratedIdeas      bool                `json:"hasGeneratedIdeas"`
+	TotalIdeasCount        int                 `json:"totalIdeasCount"`
+	ApprovedIdeasCount     int                 `json:"approvedIdeasCount"`
+	RegenerationsRemaining int                 `json:"regenerationsRemaining"`
+	RegenerationsLimit     int                 `json:"regenerationsLimit"`
+	NextRegenerationAt     *string             `json:"nextRegenerationAt,omitempty"`
 }
 
 // GetWizardDataUseCase implementa o caso de uso
 type GetWizardDataUseCase struct {
 	userRepo        repository.UserRepository
+	planRepo        repository.PlanRepository
 	businessRepo    repository.BusinessRepository
 	integrationRepo repository.IntegrationRepository
 	articleIdeaRepo repository.ArticleIdeaRepository
@@ -58,12 +65,14 @@ type GetWizardDataUseCase struct {
 // NewGetWizardDataUseCase cria nova instância
 func NewGetWizardDataUseCase(
 	userRepo repository.UserRepository,
+	planRepo repository.PlanRepository,
 	businessRepo repository.BusinessRepository,
 	integrationRepo repository.IntegrationRepository,
 	articleIdeaRepo repository.ArticleIdeaRepository,
 ) *GetWizardDataUseCase {
 	return &GetWizardDataUseCase{
 		userRepo:        userRepo,
+		planRepo:        planRepo,
 		businessRepo:    businessRepo,
 		integrationRepo: integrationRepo,
 		articleIdeaRepo: articleIdeaRepo,
@@ -91,6 +100,13 @@ func (uc *GetWizardDataUseCase) Execute(ctx context.Context, input GetWizardData
 	if user == nil {
 		log.Warn().Str("user_id", input.UserID).Msg("GetWizardDataUseCase: usuário não encontrado")
 		return nil, errors.New("user_not_found")
+	}
+
+	// Buscar plano do usuário para limites
+	plan, err := uc.planRepo.FindByID(ctx, user.PlanID)
+	if err != nil {
+		log.Error().Err(err).Msg("GetWizardDataUseCase: erro ao buscar plano")
+		return nil, errors.New("erro ao buscar plano")
 	}
 
 	output := &GetWizardDataOutput{
@@ -128,7 +144,24 @@ func (uc *GetWizardDataUseCase) Execute(ctx context.Context, input GetWizardData
 	wpIntegration, err := uc.integrationRepo.FindByUserIDAndType(ctx, userID, entity.IntegrationTypeWordPress)
 	output.HasIntegration = err == nil && wpIntegration != nil && wpIntegration.Enabled
 
-	// 6. Buscar ideias de artigos pendentes (se o usuário estiver no step 4)
+	// 6. Dados de ideias e regeneração
+	// Contar gerações na última hora
+	gensInLastHour, _ := uc.articleIdeaRepo.CountGenerationsInLastHour(ctx, userID)
+	output.RegenerationsLimit = plan.MaxIdeaRegenerationsPerHour
+	output.RegenerationsRemaining = (plan.MaxIdeaRegenerationsPerHour + 1) - gensInLastHour
+	if output.RegenerationsRemaining < 0 {
+		output.RegenerationsRemaining = 0
+	}
+
+	// Contar ideias
+	totalIdeas, _ := uc.articleIdeaRepo.CountByUserID(ctx, userID)
+	approvedIdeas, _ := uc.articleIdeaRepo.CountApprovedByUserID(ctx, userID)
+	
+	output.TotalIdeasCount = totalIdeas
+	output.ApprovedIdeasCount = approvedIdeas
+	output.HasGeneratedIdeas = totalIdeas > 0
+
+	// 7. Buscar ideias de artigos pendentes (se o usuário estiver no step 4)
 	if user.OnboardingStep >= 4 {
 		ideas, err := uc.articleIdeaRepo.FindByUserID(ctx, userID)
 		if err == nil && len(ideas) > 0 {
@@ -157,6 +190,7 @@ func (uc *GetWizardDataUseCase) Execute(ctx context.Context, input GetWizardData
 		Int("competitors_count", len(output.Competitors)).
 		Bool("has_integration", output.HasIntegration).
 		Int("pending_ideas_count", len(output.PendingIdeas)).
+		Int("regenerations_remaining", output.RegenerationsRemaining).
 		Msg("GetWizardDataUseCase bem-sucedido")
 
 	return output, nil

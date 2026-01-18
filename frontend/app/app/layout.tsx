@@ -65,7 +65,8 @@ export default function ProtectedLayout({
   const showOnboardingReminder =
     user &&
     !user.hasCompletedOnboarding &&
-    pathname !== "/app/onboarding";
+    pathname !== "/app/onboarding" &&
+    pathname !== "/app/planos";
 
   return (
     <div className="flex min-h-screen bg-[var(--color-secondary-cream)]">

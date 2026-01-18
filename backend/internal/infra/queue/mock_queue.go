@@ -21,6 +21,7 @@ import (
 type MockQueue struct {
 	articleJobRepo  repository.ArticleJobRepository
 	articleIdeaRepo repository.ArticleIdeaRepository
+	articleRepo     repository.ArticleRepository
 	processingDelay time.Duration
 }
 
@@ -28,6 +29,7 @@ type MockQueue struct {
 type MockQueueConfig struct {
 	ArticleJobRepo  repository.ArticleJobRepository
 	ArticleIdeaRepo repository.ArticleIdeaRepository
+	ArticleRepo     repository.ArticleRepository
 	ProcessingDelay time.Duration // Delay antes de "completar" o processamento (padrão: 30s)
 }
 
@@ -45,6 +47,7 @@ func NewMockQueue(cfg MockQueueConfig) *MockQueue {
 	return &MockQueue{
 		articleJobRepo:  cfg.ArticleJobRepo,
 		articleIdeaRepo: cfg.ArticleIdeaRepo,
+		articleRepo:     cfg.ArticleRepo,
 		processingDelay: delay,
 	}
 }
@@ -212,15 +215,23 @@ func (q *MockQueue) generateMockIdeas(userID, jobID uuid.UUID) []*entity.Article
 // processPublishArticles simula a publicação de artigos
 func (q *MockQueue) processPublishArticles(payload map[string]interface{}) {
 	jobIDStr, _ := payload["jobID"].(string)
+	userIDStr, _ := payload["userID"].(string)
 
 	log.Info().
 		Str("job_id", jobIDStr).
+		Str("user_id", userIDStr).
 		Dur("delay", q.processingDelay).
 		Msg("MockQueue: iniciando simulação de publicação de artigos")
 
 	jobID, err := uuid.Parse(jobIDStr)
 	if err != nil {
 		log.Error().Err(err).Msg("MockQueue: job_id inválido para publicação")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		log.Error().Err(err).Msg("MockQueue: user_id inválido para publicação")
 		return
 	}
 
@@ -233,13 +244,51 @@ func (q *MockQueue) processPublishArticles(payload map[string]interface{}) {
 		return
 	}
 
-	// 2. Simular delay
-	time.Sleep(q.processingDelay / 2)
-	_ = q.articleJobRepo.UpdateStatus(ctx, jobID, entity.JobStatusProcessing, 50)
+	// 2. Simular delay de geração
+	time.Sleep(q.processingDelay / 3)
+	_ = q.articleJobRepo.UpdateStatus(ctx, jobID, entity.JobStatusProcessing, 30)
 
-	time.Sleep(q.processingDelay / 2)
+	// 3. Buscar artigos do usuário com status "generating"
+	if q.articleRepo != nil {
+		articles, err := q.articleRepo.FindByUserIDAndStatus(ctx, userID, entity.ArticleStatusGenerating, 100, 0)
+		if err != nil {
+			log.Error().Err(err).Msg("MockQueue: erro ao buscar artigos para publicação")
+		} else {
+			log.Debug().Int("articles_count", len(articles)).Msg("MockQueue: artigos encontrados para publicação")
 
-	// 3. Atualizar status para "completed"
+			// 4. Simular delay e atualizar cada artigo
+			for i, article := range articles {
+				// Atualizar progresso
+				progress := 30 + (70 * (i + 1) / len(articles))
+				_ = q.articleJobRepo.UpdateStatus(ctx, jobID, entity.JobStatusProcessing, progress)
+
+				// Simular geração de conteúdo
+				time.Sleep(q.processingDelay / time.Duration(len(articles)*3))
+
+				// Gerar conteúdo mockado
+				mockContent := generateMockArticleContent(article.Title)
+				mockSlug := generateSlug(article.Title)
+				mockWordPressURL := "https://blog.example.com/" + mockSlug
+
+				// Atualizar conteúdo do artigo
+				if err := q.articleRepo.SetContent(ctx, article.ID, mockContent); err != nil {
+					log.Error().Err(err).Str("article_id", article.ID.String()).Msg("MockQueue: erro ao definir conteúdo do artigo")
+					continue
+				}
+
+				// Marcar artigo como publicado
+				if err := q.articleRepo.SetPublished(ctx, article.ID, mockWordPressURL); err != nil {
+					log.Error().Err(err).Str("article_id", article.ID.String()).Msg("MockQueue: erro ao marcar artigo como publicado")
+				} else {
+					log.Debug().Str("article_id", article.ID.String()).Msg("MockQueue: artigo marcado como publicado")
+				}
+			}
+		}
+	}
+
+	time.Sleep(q.processingDelay / 3)
+
+	// 5. Atualizar status para "completed"
 	if err := q.articleJobRepo.UpdateStatus(ctx, jobID, entity.JobStatusCompleted, 100); err != nil {
 		log.Error().Err(err).Msg("MockQueue: erro ao completar publicação")
 		return
@@ -248,6 +297,67 @@ func (q *MockQueue) processPublishArticles(payload map[string]interface{}) {
 	log.Info().
 		Str("job_id", jobIDStr).
 		Msg("MockQueue: publicação simulada concluída com sucesso")
+}
+
+// generateMockArticleContent gera conteúdo mockado para um artigo
+func generateMockArticleContent(title string) string {
+	return `# ` + title + `
+
+## Introdução
+
+Este é um artigo gerado automaticamente pelo sistema organiQ como parte do processo de onboarding. 
+O conteúdo real será gerado pela nossa IA quando você conectar os serviços de produção.
+
+## Por que este conteúdo é importante?
+
+O marketing de conteúdo é uma das estratégias mais eficazes para atrair tráfego orgânico qualificado.
+Com artigos otimizados para SEO, você pode:
+
+- Aumentar a visibilidade da sua marca nos mecanismos de busca
+- Estabelecer autoridade no seu nicho de mercado  
+- Gerar leads qualificados de forma sustentável
+- Criar relacionamento com seu público-alvo
+
+## Próximos passos
+
+Para obter conteúdo real gerado por IA:
+
+1. Configure suas credenciais de API na página de integrações
+2. Conecte sua conta do WordPress
+3. Gere novas matérias através do painel
+
+## Conclusão
+
+Este é apenas um exemplo de como seus artigos serão estruturados. 
+O conteúdo real será muito mais rico e personalizado para o seu negócio.
+
+---
+
+*Artigo gerado pelo organiQ - Sua plataforma de marketing de conteúdo inteligente*
+`
+}
+
+// generateSlug gera um slug a partir do título
+func generateSlug(title string) string {
+	slug := title
+	// Substituições simples para criar um slug
+	replacer := map[string]string{
+		" ": "-", "á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u",
+		"ã": "a", "õ": "o", "ç": "c", "ê": "e", "â": "a", "î": "i",
+		"ô": "o", "û": "u", ":": "", "?": "", "!": "", ",": "", ".": "",
+	}
+	for old, new := range replacer {
+		for i := 0; i < len(slug); i++ {
+			if string(slug[i]) == old {
+				slug = slug[:i] + new + slug[i+1:]
+			}
+		}
+	}
+	// Converter para lowercase e limitar tamanho
+	if len(slug) > 50 {
+		slug = slug[:50]
+	}
+	return slug
 }
 
 // ============================================

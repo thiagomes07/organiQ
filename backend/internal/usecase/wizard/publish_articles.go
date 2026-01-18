@@ -168,6 +168,12 @@ func (uc *PublishArticlesUseCase) Execute(ctx context.Context, input PublishArti
 		return nil, errors.New("erro ao processar ideias")
 	}
 
+	// 6.1. Deletar ideias não aprovadas (limpeza)
+	if err := uc.articleIdeaRepo.DeleteUnapprovedByUserID(ctx, userID); err != nil {
+		// Logar erro mas não falhar o fluxo, pois as ideias principais já foram aprovadas
+		log.Error().Err(err).Msg("PublishArticlesUseCase: erro ao deletar ideias não aprovadas")
+	}
+
 	// 7. Criar ArticleJob de publicação
 	jobID := uuid.New()
 
@@ -199,6 +205,25 @@ func (uc *PublishArticlesUseCase) Execute(ctx context.Context, input PublishArti
 	}
 
 	log.Info().Str("job_id", jobID.String()).Msg("PublishArticlesUseCase: job criado")
+
+	// 7.1 Enviar mensagem de início de job para a fila (para MockQueue ou worker processar)
+	jobStartMessage := map[string]interface{}{
+		"jobID":         jobID.String(),
+		"userID":        userID.String(),
+		"type":          "publish_articles",
+		"articlesCount": articlesCount,
+	}
+
+	jobStartJSON, err := json.Marshal(jobStartMessage)
+	if err != nil {
+		log.Error().Err(err).Msg("PublishArticlesUseCase: erro ao serializar mensagem de job")
+		// Não falhar, apenas logar
+	} else {
+		if err := uc.queueService.SendMessage(ctx, "article-publish-queue", jobStartJSON); err != nil {
+			log.Error().Err(err).Msg("PublishArticlesUseCase: erro ao enviar mensagem de job para fila")
+			// Não falhar, apenas logar
+		}
+	}
 
 	// 8. Criar registros de Article e enviar para fila
 	for _, idea := range ideas {
@@ -283,4 +308,152 @@ func (uc *PublishArticlesUseCase) Execute(ctx context.Context, input PublishArti
 		Status:        string(entity.JobStatusQueued),
 		ArticlesCount: articlesCount,
 	}, nil
+}
+
+// ============================================
+// GET PUBLISH STATUS
+// ============================================
+
+// GetPublishStatusInput dados de entrada
+type GetPublishStatusInput struct {
+	UserID string
+	JobID  string
+}
+
+// GetPublishStatusOutput dados de saída
+type GetPublishStatusOutput struct {
+	JobID     string
+	Status    string
+	Progress  int
+	Published int
+	Total     int
+	Message   string
+	ErrorMsg  *string
+}
+
+// GetPublishStatusUseCase implementa o caso de uso
+type GetPublishStatusUseCase struct {
+	userRepo       repository.UserRepository
+	articleJobRepo repository.ArticleJobRepository
+	articleRepo    repository.ArticleRepository
+}
+
+// NewGetPublishStatusUseCase cria nova instância
+func NewGetPublishStatusUseCase(
+	userRepo repository.UserRepository,
+	articleJobRepo repository.ArticleJobRepository,
+	articleRepo repository.ArticleRepository,
+) *GetPublishStatusUseCase {
+	return &GetPublishStatusUseCase{
+		userRepo:       userRepo,
+		articleJobRepo: articleJobRepo,
+		articleRepo:    articleRepo,
+	}
+}
+
+// Execute executa o caso de uso
+func (uc *GetPublishStatusUseCase) Execute(ctx context.Context, input GetPublishStatusInput) (*GetPublishStatusOutput, error) {
+	log.Debug().
+		Str("user_id", input.UserID).
+		Str("job_id", input.JobID).
+		Msg("GetPublishStatusUseCase Execute iniciado")
+
+	// 1. Parse IDs
+	userID, err := uuid.Parse(input.UserID)
+	if err != nil {
+		log.Error().Err(err).Msg("GetPublishStatusUseCase: user_id inválido")
+		return nil, errors.New("invalid_user_id")
+	}
+
+	jobID, err := uuid.Parse(input.JobID)
+	if err != nil {
+		log.Error().Err(err).Msg("GetPublishStatusUseCase: job_id inválido")
+		return nil, errors.New("invalid_job_id")
+	}
+
+	// 2. Buscar job
+	job, err := uc.articleJobRepo.FindByID(ctx, jobID)
+	if err != nil {
+		log.Error().Err(err).Msg("GetPublishStatusUseCase: erro ao buscar job")
+		return nil, errors.New("erro ao buscar status")
+	}
+
+	if job == nil {
+		log.Warn().Str("job_id", input.JobID).Msg("GetPublishStatusUseCase: job não encontrado")
+		return nil, errors.New("job_not_found")
+	}
+
+	// 3. Validar ownership (job pertence ao usuário)
+	if job.UserID != userID {
+		log.Warn().
+			Str("job_user_id", job.UserID.String()).
+			Str("request_user_id", input.UserID).
+			Msg("GetPublishStatusUseCase: acesso negado")
+		return nil, errors.New("access_denied")
+	}
+
+	// 4. Validar que é job de publicação
+	if job.Type != entity.JobTypePublish {
+		log.Warn().Str("job_type", string(job.Type)).Msg("GetPublishStatusUseCase: tipo de job incorreto")
+		return nil, errors.New("invalid_job_type")
+	}
+
+	// 5. Extrair total do payload
+	total := 0
+	if articlesCount, ok := job.Payload["articlesCount"].(float64); ok {
+		total = int(articlesCount)
+	}
+
+	// 6. Contar artigos publicados (status = published)
+	published := 0
+	if job.Status == entity.JobStatusCompleted || job.Status == entity.JobStatusFailed {
+		// Buscar artigos associados a este job via ideaIDs no payload
+		if ideaIDsRaw, ok := job.Payload["ideaIDs"].([]interface{}); ok {
+			for range ideaIDsRaw {
+				// Cada idea corresponde a um artigo potencialmente publicado
+				published++
+			}
+		}
+		// Em caso de sucesso, consideramos todos publicados
+		if job.Status == entity.JobStatusCompleted {
+			published = total
+		}
+	}
+
+	// 7. Construir output
+	output := &GetPublishStatusOutput{
+		JobID:     job.ID.String(),
+		Status:    string(job.Status),
+		Progress:  job.Progress,
+		Published: published,
+		Total:     total,
+		Message:   getPublishStatusMessage(job.Status),
+		ErrorMsg:  job.ErrorMessage,
+	}
+
+	log.Debug().
+		Str("job_id", input.JobID).
+		Str("status", output.Status).
+		Int("progress", output.Progress).
+		Int("published", output.Published).
+		Int("total", output.Total).
+		Msg("GetPublishStatusUseCase bem-sucedido")
+
+	return output, nil
+}
+
+// getPublishStatusMessage retorna mensagem amigável para o status
+func getPublishStatusMessage(status entity.JobStatus) string {
+	switch status {
+	case entity.JobStatusQueued:
+		return "Aguardando processamento..."
+	case entity.JobStatusProcessing:
+		return "Publicando artigos..."
+	case entity.JobStatusCompleted:
+		return "Artigos publicados com sucesso!"
+	case entity.JobStatusFailed:
+		return "Erro ao publicar artigos. Tente novamente."
+	default:
+		return "Status desconhecido"
+	}
 }

@@ -19,13 +19,14 @@ import (
 
 // WizardHandler agrupa handlers do wizard (onboarding)
 type WizardHandler struct {
-	saveBusinessUC     *wizard.SaveBusinessUseCase
-	saveCompetitorsUC  *wizard.SaveCompetitorsUseCase
-	saveIntegrationsUC *wizard.SaveIntegrationsUseCase
-	generateIdeasUC    *wizard.GenerateIdeasUseCase
-	getIdeasStatusUC   *wizard.GetIdeasStatusUseCase
-	publishArticlesUC  *wizard.PublishArticlesUseCase
-	getWizardDataUC    *wizard.GetWizardDataUseCase
+	saveBusinessUC      *wizard.SaveBusinessUseCase
+	saveCompetitorsUC   *wizard.SaveCompetitorsUseCase
+	saveIntegrationsUC  *wizard.SaveIntegrationsUseCase
+	generateIdeasUC     *wizard.GenerateIdeasUseCase
+	getIdeasStatusUC    *wizard.GetIdeasStatusUseCase
+	publishArticlesUC   *wizard.PublishArticlesUseCase
+	getPublishStatusUC  *wizard.GetPublishStatusUseCase
+	getWizardDataUC     *wizard.GetWizardDataUseCase
 }
 
 // NewWizardHandler cria nova instância
@@ -36,16 +37,18 @@ func NewWizardHandler(
 	generateIdeasUC *wizard.GenerateIdeasUseCase,
 	getIdeasStatusUC *wizard.GetIdeasStatusUseCase,
 	publishArticlesUC *wizard.PublishArticlesUseCase,
+	getPublishStatusUC *wizard.GetPublishStatusUseCase,
 	getWizardDataUC *wizard.GetWizardDataUseCase,
 ) *WizardHandler {
 	return &WizardHandler{
-		saveBusinessUC:     saveBusinessUC,
-		saveCompetitorsUC:  saveCompetitorsUC,
-		saveIntegrationsUC: saveIntegrationsUC,
-		generateIdeasUC:    generateIdeasUC,
-		getIdeasStatusUC:   getIdeasStatusUC,
-		publishArticlesUC:  publishArticlesUC,
-		getWizardDataUC:    getWizardDataUC,
+		saveBusinessUC:      saveBusinessUC,
+		saveCompetitorsUC:   saveCompetitorsUC,
+		saveIntegrationsUC:  saveIntegrationsUC,
+		generateIdeasUC:     generateIdeasUC,
+		getIdeasStatusUC:    getIdeasStatusUC,
+		publishArticlesUC:   publishArticlesUC,
+		getPublishStatusUC:  getPublishStatusUC,
+		getWizardDataUC:     getWizardDataUC,
 	}
 }
 
@@ -64,11 +67,17 @@ type PendingIdeaResponse struct {
 
 // GetWizardDataResponse response body
 type GetWizardDataResponse struct {
-	OnboardingStep int                       `json:"onboardingStep"`
-	Business       *wizard.BusinessDataOutput `json:"business,omitempty"`
-	Competitors    []string                  `json:"competitors,omitempty"`
-	HasIntegration bool                      `json:"hasIntegration"`
-	PendingIdeas   []PendingIdeaResponse     `json:"pendingIdeas,omitempty"`
+	OnboardingStep         int                        `json:"onboardingStep"`
+	Business               *wizard.BusinessDataOutput `json:"business,omitempty"`
+	Competitors            []string                   `json:"competitors,omitempty"`
+	HasIntegration         bool                       `json:"hasIntegration"`
+	PendingIdeas           []PendingIdeaResponse      `json:"pendingIdeas,omitempty"`
+	HasGeneratedIdeas      bool                       `json:"hasGeneratedIdeas"`
+	TotalIdeasCount        int                        `json:"totalIdeasCount"`
+	ApprovedIdeasCount     int                        `json:"approvedIdeasCount"`
+	RegenerationsRemaining int                        `json:"regenerationsRemaining"`
+	RegenerationsLimit     int                        `json:"regenerationsLimit"`
+	NextRegenerationAt     *string                    `json:"nextRegenerationAt,omitempty"`
 }
 
 // GetWizardData implementa GET /api/wizard/data
@@ -116,11 +125,17 @@ func (h *WizardHandler) GetWizardData(w http.ResponseWriter, r *http.Request) {
 
 	// 4. Responder
 	response := GetWizardDataResponse{
-		OnboardingStep: output.OnboardingStep,
-		Business:       output.Business,
-		Competitors:    output.Competitors,
-		HasIntegration: output.HasIntegration,
-		PendingIdeas:   pendingIdeas,
+		OnboardingStep:         output.OnboardingStep,
+		Business:               output.Business,
+		Competitors:            output.Competitors,
+		HasIntegration:         output.HasIntegration,
+		PendingIdeas:           pendingIdeas,
+		HasGeneratedIdeas:      output.HasGeneratedIdeas,
+		TotalIdeasCount:        output.TotalIdeasCount,
+		ApprovedIdeasCount:     output.ApprovedIdeasCount,
+		RegenerationsRemaining: output.RegenerationsRemaining,
+		RegenerationsLimit:     output.RegenerationsLimit,
+		NextRegenerationAt:     output.NextRegenerationAt,
 	}
 
 	util.RespondJSON(w, http.StatusOK, response)
@@ -130,14 +145,19 @@ func (h *WizardHandler) GetWizardData(w http.ResponseWriter, r *http.Request) {
 // POST /api/wizard/generate-ideas
 // ============================================
 
-// GenerateIdeasRequest request body (vazio, apenas context)
-type GenerateIdeasRequest struct{}
+// GenerateIdeasRequest request body
+type GenerateIdeasRequest struct {
+	IsRegeneration bool `json:"isRegeneration"`
+}
 
 // GenerateIdeasResponse response body
 type GenerateIdeasResponse struct {
-	JobID   string `json:"jobId"`
-	Status  string `json:"status"`
-	Message string `json:"message"`
+	JobID                  string  `json:"jobId,omitempty"`
+	Status                 string  `json:"status"`
+	Message                string  `json:"message"`
+	RegenerationsRemaining int     `json:"regenerationsRemaining,omitempty"`
+	RegenerationsLimit     int     `json:"regenerationsLimit,omitempty"`
+	NextRegenerationAt     *string `json:"nextRegenerationAt,omitempty"`
 }
 
 // GenerateIdeas implementa POST /api/wizard/generate-ideas
@@ -152,9 +172,17 @@ func (h *WizardHandler) GenerateIdeas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Executar use case
+	// 2. Parse request body (opcional, pode ser vazio)
+	var req GenerateIdeasRequest
+	if r.Body != http.NoBody {
+		// Tentar decodificar, mas não falhar se estiver vazio ou malformado (assumir false)
+		_ = json.NewDecoder(r.Body).Decode(&req)
+	}
+
+	// 3. Executar use case
 	input := wizard.GenerateIdeasInput{
-		UserID: userID,
+		UserID:         userID,
+		IsRegeneration: req.IsRegeneration,
 	}
 
 	output, err := h.generateIdeasUC.Execute(r.Context(), input)
@@ -174,17 +202,32 @@ func (h *WizardHandler) GenerateIdeas(w http.ResponseWriter, r *http.Request) {
 			util.RespondError(w, http.StatusInternalServerError, "database_error", "Erro ao acessar banco de dados")
 		} else if err.Error() == "erro ao processar geração" || err.Error() == "erro ao iniciar processamento" {
 			util.RespondError(w, http.StatusInternalServerError, "processing_error", "Erro ao iniciar processamento. Tente novamente.")
+		} else if err.Error() == "limite de regeneração por hora excedido" {
+			// Construir resposta com status de limite excedido
+			resp := GenerateIdeasResponse{
+				Status:                 "limit_exceeded",
+				Message:                "Limite de regeneração por hora excedido. Tente novamente mais tarde.",
+				RegenerationsRemaining: 0,
+				RegenerationsLimit:     output.RegenerationsLimit, // Output pode vir preenchido mesmo com erro no caso especial que implementamos
+				NextRegenerationAt:     output.NextRegenerationAt,
+			}
+			util.RespondJSON(w, http.StatusTooManyRequests, resp)
+			return
+		} else if err.Error() == "todas as ideias já foram aprovadas" {
+			util.RespondError(w, http.StatusBadRequest, "all_approved", "Todas as ideias já foram aprovadas.")
 		} else {
 			util.RespondError(w, http.StatusBadRequest, "validation_error", err.Error())
 		}
 		return
 	}
 
-	// 3. Responder
+	// 4. Responder
 	response := GenerateIdeasResponse{
-		JobID:   output.JobID,
-		Status:  output.Status,
-		Message: "Sua solicitação foi enfileirada. Use o jobId para verificar o progresso.",
+		JobID:                  output.JobID,
+		Status:                 output.Status,
+		Message:                "Sua solicitação foi enfileirada. Use o jobId para verificar o progresso.",
+		RegenerationsRemaining: output.RegenerationsRemaining,
+		RegenerationsLimit:     output.RegenerationsLimit,
 	}
 
 	util.RespondJSON(w, http.StatusAccepted, response) // 202 Accepted
@@ -347,6 +390,10 @@ func (h *WizardHandler) SaveBusiness(w http.ResponseWriter, r *http.Request) {
 		hasBlog = true
 	}
 
+	// Parse removeBrandFile (para remoção do arquivo de marca)
+	removeBrandFileStr := r.FormValue("removeBrandFile")
+	removeBrandFile := removeBrandFileStr == "true"
+
 	// Parse location JSON
 	var location *LocationData
 	if err := json.Unmarshal([]byte(locationJSON), &location); err != nil {
@@ -429,6 +476,7 @@ func (h *WizardHandler) SaveBusiness(w http.ResponseWriter, r *http.Request) {
 		BrandFile:          brandFile,
 		BrandFileName:      brandFileName,
 		BrandFileSize:      brandFileSize,
+		RemoveBrandFile:    removeBrandFile,
 	}
 
 	output, err := h.saveBusinessUC.Execute(r.Context(), input)
@@ -783,6 +831,8 @@ func (h *WizardHandler) PublishArticles(w http.ResponseWriter, r *http.Request) 
 			util.RespondError(w, http.StatusNotFound, "articles_not_found", "Artigos não encontrados")
 		case "integration_not_configured":
 			util.RespondError(w, http.StatusBadRequest, "integration_missing", "Integração WordPress não configurada")
+		case "limite de artigos excedido para o seu plano":
+			util.RespondError(w, http.StatusForbidden, "limit_exceeded", "Limite de artigos excedido para o seu plano")
 		default:
 			util.RespondError(w, http.StatusInternalServerError, "processing_error", "Erro ao processar publicação")
 		}
@@ -798,4 +848,78 @@ func (h *WizardHandler) PublishArticles(w http.ResponseWriter, r *http.Request) 
 	}
 
 	util.RespondJSON(w, http.StatusAccepted, response) // 202 Accepted
+}
+
+// ============================================
+// GET /api/wizard/publish-status/{jobId}
+// ============================================
+
+// GetPublishStatusResponse response body
+type GetPublishStatusResponse struct {
+	JobID     string  `json:"jobId"`
+	Status    string  `json:"status"`
+	Progress  int     `json:"progress"`
+	Published int     `json:"published"`
+	Total     int     `json:"total"`
+	Message   string  `json:"message"`
+	Error     *string `json:"errorMessage,omitempty"`
+}
+
+// GetPublishStatus implementa GET /api/wizard/publish-status/{jobId}
+func (h *WizardHandler) GetPublishStatus(w http.ResponseWriter, r *http.Request) {
+	log.Debug().Msg("WizardHandler GetPublishStatus iniciado")
+
+	// 1. Extrair user_id do context
+	userID := middleware.GetUserIDFromContext(r)
+	if userID == "" {
+		log.Warn().Msg("GetPublishStatus: usuário não autenticado")
+		util.RespondError(w, http.StatusUnauthorized, "unauthorized", "Usuário não autenticado")
+		return
+	}
+
+	// 2. Extrair jobId do path parameter
+	jobID := chi.URLParam(r, "jobId")
+	if jobID == "" {
+		log.Warn().Msg("GetPublishStatus: jobId não fornecido")
+		util.RespondError(w, http.StatusBadRequest, "missing_param", "jobId é obrigatório")
+		return
+	}
+
+	// 3. Executar use case
+	input := wizard.GetPublishStatusInput{
+		UserID: userID,
+		JobID:  jobID,
+	}
+
+	output, err := h.getPublishStatusUC.Execute(r.Context(), input)
+	if err != nil {
+		log.Error().Err(err).Msg("GetPublishStatus: erro no use case")
+
+		// Mapear erros de negócio para HTTP
+		if err.Error() == "invalid_user_id" || err.Error() == "invalid_job_id" {
+			util.RespondError(w, http.StatusBadRequest, "invalid_param", "Parâmetro inválido")
+		} else if err.Error() == "job_not_found" {
+			util.RespondError(w, http.StatusNotFound, "job_not_found", "Job não encontrado")
+		} else if err.Error() == "access_denied" {
+			util.RespondError(w, http.StatusForbidden, "forbidden", "Acesso negado a este job")
+		} else if err.Error() == "invalid_job_type" {
+			util.RespondError(w, http.StatusBadRequest, "invalid_job_type", "Tipo de job inválido")
+		} else {
+			util.RespondError(w, http.StatusInternalServerError, "database_error", "Erro ao buscar status")
+		}
+		return
+	}
+
+	// 4. Responder
+	response := GetPublishStatusResponse{
+		JobID:     output.JobID,
+		Status:    output.Status,
+		Progress:  output.Progress,
+		Published: output.Published,
+		Total:     output.Total,
+		Message:   output.Message,
+		Error:     output.ErrorMsg,
+	}
+
+	util.RespondJSON(w, http.StatusOK, response)
 }

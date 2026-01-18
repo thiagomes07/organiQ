@@ -460,6 +460,56 @@ func (r *ArticleIdeaRepositoryPostgres) CountByUserID(ctx context.Context, userI
 	return int(count), nil
 }
 
+// DeleteUnapprovedByUserID implementa repository.DeleteUnapprovedByUserID
+func (r *ArticleIdeaRepositoryPostgres) DeleteUnapprovedByUserID(ctx context.Context, userID uuid.UUID) error {
+	log.Debug().Str("user_id", userID.String()).Msg("ArticleIdeaRepository DeleteUnapprovedByUserID")
+
+	if err := r.db.WithContext(ctx).Delete(&entity.ArticleIdea{}, "user_id = ? AND approved = ?", userID, false).Error; err != nil {
+		log.Error().Err(err).Msg("ArticleIdeaRepository DeleteUnapprovedByUserID erro no banco")
+		return err
+	}
+
+	return nil
+}
+
+// CountApprovedByUserID implementa repository.CountApprovedByUserID
+func (r *ArticleIdeaRepositoryPostgres) CountApprovedByUserID(ctx context.Context, userID uuid.UUID) (int, error) {
+	var count int64
+
+	if err := r.db.WithContext(ctx).
+		Table("article_ideas").
+		Where("user_id = ? AND approved = ?", userID, true).
+		Count(&count).
+		Error; err != nil {
+
+		log.Error().Err(err).Msg("ArticleIdeaRepository CountApprovedByUserID erro no banco")
+		return 0, err
+	}
+
+	return int(count), nil
+}
+
+// CountGenerationsInLastHour implementa repository.CountGenerationsInLastHour
+// Conta quantos jobs de geração de ideias foram criados na última hora
+func (r *ArticleIdeaRepositoryPostgres) CountGenerationsInLastHour(ctx context.Context, userID uuid.UUID) (int, error) {
+	var count int64
+
+	// Conta ideias distintas por generated_at (agrupadas por tempo de geração)
+	// Uma "geração" é um grupo de ideias com generated_at muito próximos
+	if err := r.db.WithContext(ctx).
+		Table("article_ideas").
+		Where("user_id = ? AND generated_at > NOW() - INTERVAL '1 hour'", userID).
+		Select("COUNT(DISTINCT DATE_TRUNC('minute', generated_at))").
+		Scan(&count).
+		Error; err != nil {
+
+		log.Error().Err(err).Msg("ArticleIdeaRepository CountGenerationsInLastHour erro no banco")
+		return 0, err
+	}
+
+	return int(count), nil
+}
+
 // ============================================
 // ARTICLE REPOSITORY
 // ============================================

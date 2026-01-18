@@ -124,6 +124,7 @@ func main() {
 	queueService, err := queue.NewQueueServiceWithMock(cfg, queue.MockQueueDependencies{
 		ArticleJobRepo:  repositories.ArticleJob,
 		ArticleIdeaRepo: repositories.ArticleIdea,
+		ArticleRepo:     repositories.Article,
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to initialize queue service")
@@ -238,6 +239,12 @@ func main() {
 		queueService,
 	)
 
+	getPublishStatusUC := wizard.NewGetPublishStatusUseCase(
+		repositories.User,
+		repositories.ArticleJob,
+		repositories.Article,
+	)
+
 	// ============================================
 	// USE CASES: ACCOUNT
 	// ============================================
@@ -254,6 +261,11 @@ func main() {
 
 	updateIntegrationsUC := accountUC.NewUpdateIntegrationsUseCase(
 		repositories.Integration,
+		cryptoService,
+	)
+
+	updatePasswordUC := accountUC.NewUpdatePasswordUseCase(
+		repositories.User,
 		cryptoService,
 	)
 
@@ -286,6 +298,7 @@ func main() {
 		generateIdeasUC,
 		getIdeasStatusUC,
 		publishArticlesUC,
+		getPublishStatusUC,
 		getWizardDataUC,
 	)
 
@@ -327,6 +340,7 @@ func main() {
 		getAccountUC,
 		updateProfileUC,
 		updateIntegrationsUC,
+		updatePasswordUC,
 		getPlanUC,
 	)
 
@@ -584,6 +598,7 @@ func setupRouter(
 				})
 
 				r.Get("/ideas-status/{jobId}", wizardHandler.GetIdeasStatus)
+				r.Get("/publish-status/{jobId}", wizardHandler.GetPublishStatus)
 			})
 
 			// Payment routes (protegidas) - spec 4.4
@@ -609,6 +624,7 @@ func setupRouter(
 				r.Get("/", accountHandler.GetAccount)
 				r.Patch("/profile", accountHandler.UpdateProfile)
 				r.Patch("/integrations", accountHandler.UpdateIntegrations)
+				r.Patch("/password", accountHandler.UpdatePassword)
 				r.Get("/plan", accountHandler.GetPlan)
 			})
 		})

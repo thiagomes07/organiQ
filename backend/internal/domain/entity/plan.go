@@ -12,13 +12,14 @@ import (
 
 // Plan representa um plano de assinatura
 type Plan struct {
-	ID          uuid.UUID `gorm:"primaryKey" json:"id"`
-	Name        string    `gorm:"uniqueIndex;column:name" json:"name"`
-	MaxArticles int       `gorm:"column:max_articles" json:"maxArticles"`
-	Price       float64   `gorm:"column:price" json:"price"`
-	Features    Features  `gorm:"type:jsonb;column:features" json:"features"`
-	Active      bool      `gorm:"column:active" json:"active"`
-	CreatedAt   time.Time `gorm:"column:created_at" json:"createdAt"`
+	ID                          uuid.UUID `gorm:"primaryKey" json:"id"`
+	Name                        string    `gorm:"uniqueIndex;column:name" json:"name"`
+	MaxArticles                 int       `gorm:"column:max_articles" json:"maxArticles"`
+	MaxIdeaRegenerationsPerHour int       `gorm:"column:max_idea_regenerations_per_hour" json:"maxIdeaRegenerationsPerHour"`
+	Price                       float64   `gorm:"column:price" json:"price"`
+	Features                    Features  `gorm:"type:jsonb;column:features" json:"features"`
+	Active                      bool      `gorm:"column:active" json:"active"`
+	CreatedAt                   time.Time `gorm:"column:created_at" json:"createdAt"`
 }
 
 // Features representa a lista de features do plano
