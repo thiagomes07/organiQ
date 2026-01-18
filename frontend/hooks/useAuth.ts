@@ -50,8 +50,6 @@ export function useAuth() {
     mutationFn: authApi.login,
     onSuccess: (data) => {
       setUser(data.user)
-      toast.success('Login realizado com sucesso!')
-
       // Redirecionar baseado no status do onboarding
       if (!data.user.hasCompletedOnboarding) {
         router.push('/app/planos')
@@ -74,7 +72,7 @@ export function useAuth() {
     onSuccess: (data) => {
       setUser(data.user)
       toast.success('Conta criada com sucesso!')
-      
+
       // Sempre redireciona para planos no primeiro acesso
       router.push('/app/planos')
     },
@@ -92,14 +90,13 @@ export function useAuth() {
     mutationFn: authApi.logout,
     onSuccess: () => {
       clearUser()
-      toast.success('Logout realizado com sucesso!')
       router.push('/login')
     },
     onError: (error) => {
       // Limpa localmente mesmo se API falhar
       clearUser()
       router.push('/login')
-      
+
       const message = getErrorMessage(error)
       toast.error(message || 'Erro ao fazer logout')
     }
@@ -130,17 +127,17 @@ export function useAuth() {
     user,
     isAuthenticated,
     isLoading,
-    
+
     // Actions
     login,
     register,
     logout,
-    
+
     // Mutation states
     isLoggingIn: loginMutation.isPending,
     isRegistering: registerMutation.isPending,
     isLoggingOut: logoutMutation.isPending,
-    
+
     // Helpers
     hasCompletedOnboarding: user?.hasCompletedOnboarding ?? false,
     canCreateArticles: user ? user.articlesUsed < user.maxArticles : false,

@@ -442,7 +442,7 @@ func (h *WizardHandler) SaveBusiness(w http.ResponseWriter, r *http.Request) {
 
 // SaveCompetitorsRequest request body
 type SaveCompetitorsRequest struct {
-	CompetitorURLs []string `json:"competitorUrls" validate:"required,min=1,max=10"`
+	CompetitorURLs []string `json:"competitorUrls" validate:"required,max=20"`
 }
 
 // SaveCompetitorsResponse response body

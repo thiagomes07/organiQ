@@ -207,8 +207,12 @@ export const businessSchema = z
 
 export const competitorsSchema = z.object({
   competitorUrls: z
-    .array(z.string().url("URL inválida"))
-    .max(10, "Máximo de 10 concorrentes"),
+    .array(
+      z.string()
+        .min(2, "Mínimo de 2 caracteres")
+        .max(200, "Máximo de 200 caracteres")
+    )
+    .max(20, "Máximo de 20 concorrentes"),
 });
 
 export const integrationsSchema = z

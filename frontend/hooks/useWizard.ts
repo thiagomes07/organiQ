@@ -225,7 +225,6 @@ export function useWizard(isOnboarding: boolean = true) {
     onSuccess: (_, variables) => {
       setBusinessData(variables);
       setCurrentStep(2);
-      toast.success("Informações salvas!");
     },
     onError: (error) => {
       const message = getErrorMessage(error);
@@ -244,8 +243,6 @@ export function useWizard(isOnboarding: boolean = true) {
       setCurrentStep(isOnboarding ? 3 : 999); // Se não é onboarding, pula para loading
       if (!isOnboarding) {
         generateIdeasMutation.mutate({ competitorUrls: variables.competitorUrls });
-      } else {
-        toast.success("Concorrentes salvos!");
       }
     },
     onError: (error) => {

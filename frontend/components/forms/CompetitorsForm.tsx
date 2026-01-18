@@ -44,7 +44,7 @@ export function CompetitorsForm({
           Concorrentes (Opcional)
         </h3>
         <p className="text-sm font-onest text-[var(--color-primary-dark)]/70">
-          Adicione URLs de concorrentes para criar uma estratégia de SEO mais
+          Adicione sites ou nomes de concorrentes para criar uma estratégia de SEO mais
           competitiva. Esta etapa é opcional, mas recomendada.
         </p>
       </div>
@@ -78,8 +78,8 @@ export function CompetitorsForm({
                     <div className="mt-1 flex gap-2">
                       <Input
                         id={`competitor-${index}`}
-                        type="url"
-                        placeholder="https://concorrente.com.br"
+                        type="text"
+                        placeholder="URL ou nome do concorrente (ex: Coca Cola)"
                         error={errors.competitorUrls?.[index]?.message}
                         {...register(`competitorUrls.${index}` as const)}
                       />
@@ -104,7 +104,7 @@ export function CompetitorsForm({
             ))}
 
             {/* Add More Button */}
-            {competitorUrls.length < 10 && (
+            {competitorUrls.length < 20 && (
               <Button
                 type="button"
                 variant="outline"
@@ -113,13 +113,13 @@ export function CompetitorsForm({
                 className="w-full"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Adicionar concorrente ({competitorUrls.length}/10)
+                Adicionar concorrente ({competitorUrls.length}/20)
               </Button>
             )}
 
-            {competitorUrls.length >= 10 && (
+            {competitorUrls.length >= 20 && (
               <p className="text-xs text-[var(--color-warning)] font-onest text-center">
-                Limite de 10 concorrentes atingido
+                Limite de 20 concorrentes atingido
               </p>
             )}
           </>
@@ -129,9 +129,7 @@ export function CompetitorsForm({
       {/* Info Box */}
       <div className="bg-[var(--color-primary-purple)]/5 border border-[var(--color-primary-purple)]/20 rounded-[var(--radius-md)] p-4">
         <p className="text-sm font-onest text-[var(--color-primary-dark)]/80">
-          💡 <strong>Dica:</strong> Adicione sites que produzem conteúdo similar
-          ao seu. Nossa IA analisará suas estratégias de SEO para criar matérias
-          ainda melhores.
+          💡 <strong>Dica:</strong> A preferência é por <strong>Links (URLs)</strong>, pois permitem uma análise mais profunda. Mas você também pode adicionar apenas o nome do concorrente.
         </p>
       </div>
 

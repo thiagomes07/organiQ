@@ -56,40 +56,34 @@ func (uc *SaveCompetitorsUseCase) Execute(ctx context.Context, input SaveCompeti
 	}
 
 	// 2. Validar quantidade
-	if len(input.CompetitorURLs) == 0 {
-		log.Warn().Msg("SaveCompetitorsUseCase: nenhuma URL fornecida")
-		return nil, errors.New("pelo menos uma URL de concorrente é obrigatória")
+	if len(input.CompetitorURLs) > 20 {
+		log.Warn().Int("count", len(input.CompetitorURLs)).Msg("SaveCompetitorsUseCase: muitos concorrentes")
+		return nil, errors.New("máximo 20 concorrentes permitidos")
 	}
 
-	if len(input.CompetitorURLs) > 10 {
-		log.Warn().Int("count", len(input.CompetitorURLs)).Msg("SaveCompetitorsUseCase: muitas URLs")
-		return nil, errors.New("máximo 10 URLs de concorrentes permitidas")
-	}
+	// 3. Validar e processar inputs
+	validItems := make([]string, 0, len(input.CompetitorURLs))
+	itemMap := make(map[string]bool)
 
-	// 3. Validar e deduplica URLs
-	validURLs := make([]string, 0, len(input.CompetitorURLs))
-	urlMap := make(map[string]bool)
+	for _, rawItem := range input.CompetitorURLs {
+		trimmed := rawItem
 
-	for _, rawURL := range input.CompetitorURLs {
-		// Validar URL
-		if !isValidURL(rawURL) {
-			log.Warn().Str("url", rawURL).Msg("SaveCompetitorsUseCase: URL inválida")
-			return nil, errors.New("URL inválida: " + rawURL)
+		// Validar tamanho (2 a 200 caracteres)
+		if len(trimmed) < 2 || len(trimmed) > 200 {
+			log.Warn().Str("item", trimmed).Msg("SaveCompetitorsUseCase: item com tamanho inválido")
+			return nil, errors.New("cada concorrente deve ter entre 2 e 200 caracteres")
 		}
 
-		// Normalizar URL (adicionar https:// se não tiver schema)
-		normalized := normalizeURL(rawURL)
+		// Se parece URL, tentar normalizar
+		if isValidURL(trimmed) {
+			trimmed = normalizeURL(trimmed)
+		}
 
 		// Deduplica
-		if !urlMap[normalized] {
-			validURLs = append(validURLs, normalized)
-			urlMap[normalized] = true
+		if !itemMap[trimmed] {
+			validItems = append(validItems, trimmed)
+			itemMap[trimmed] = true
 		}
-	}
-
-	if len(validURLs) == 0 {
-		log.Warn().Msg("SaveCompetitorsUseCase: nenhuma URL válida após validação")
-		return nil, errors.New("nenhuma URL válida fornecida")
 	}
 
 	// 4. Deletar competidores anteriores
@@ -100,17 +94,19 @@ func (uc *SaveCompetitorsUseCase) Execute(ctx context.Context, input SaveCompeti
 	}
 
 	// 5. Inserir novos competidores em lote
-	log.Debug().Str("user_id", input.UserID).Int("count", len(validURLs)).Msg("SaveCompetitorsUseCase: inserindo competidores")
-	for _, urlStr := range validURLs {
-		if err := uc.businessRepo.CreateCompetitor(ctx, userID, urlStr); err != nil {
-			log.Error().Err(err).Str("url", urlStr).Msg("SaveCompetitorsUseCase: erro ao criar competidor")
-			return nil, errors.New("erro ao salvar URL de concorrente: " + urlStr)
+	if len(validItems) > 0 {
+		log.Debug().Str("user_id", input.UserID).Int("count", len(validItems)).Msg("SaveCompetitorsUseCase: inserindo competidores")
+		for _, itemStr := range validItems {
+			if err := uc.businessRepo.CreateCompetitor(ctx, userID, itemStr); err != nil {
+				log.Error().Err(err).Str("item", itemStr).Msg("SaveCompetitorsUseCase: erro ao criar competidor")
+				return nil, errors.New("erro ao salvar concorrente: " + itemStr)
+			}
 		}
 	}
 
 	log.Info().
 		Str("user_id", input.UserID).
-		Int("count", len(validURLs)).
+		Int("count", len(validItems)).
 		Msg("SaveCompetitorsUseCase bem-sucedido")
 
 	// 6. Atualizar onboarding_step do usuário para 3 (competitors completo)
@@ -124,7 +120,7 @@ func (uc *SaveCompetitorsUseCase) Execute(ctx context.Context, input SaveCompeti
 
 	return &SaveCompetitorsOutput{
 		Success: true,
-		Count:   len(validURLs),
+		Count:   len(validItems),
 	}, nil
 }
 
