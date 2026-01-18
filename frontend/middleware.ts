@@ -61,13 +61,14 @@ export function middleware(request: NextRequest) {
       }
     } else if (onboardingStep >= 1 && onboardingStep <= 4) {
       // Usuário no meio do onboarding (já pagou plano)
-      const allowed = ['/app/onboarding']
+      // Permite acesso à conta para permitir upgrades/ajustes
+      const allowed = ['/app/onboarding', '/app/conta']
       if (!allowed.includes(pathname)) {
         return NextResponse.redirect(new URL('/app/onboarding', request.url))
       }
     } else {
       // step 0: Usuário ainda não escolheu/pagou plano
-      const allowed = ['/app/planos', '/app/onboarding']
+      const allowed = ['/app/planos', '/app/onboarding', '/app/conta']
       if (!allowed.includes(pathname)) {
         return NextResponse.redirect(new URL('/app/planos', request.url))
       }

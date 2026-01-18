@@ -81,17 +81,25 @@ export function Sidebar() {
                 {user.email}
               </p>
             </div>
-            <ChevronDown 
+            <ChevronDown
               className={cn(
                 "h-4 w-4 text-[var(--color-primary-dark)]/60 transition-transform duration-200",
                 isDropdownOpen && "rotate-180"
-              )} 
+              )}
             />
           </button>
 
           {/* Dropdown Menu */}
           {isDropdownOpen && (
             <div className="absolute top-full left-4 right-4 mt-2 bg-white rounded-[var(--radius-sm)] shadow-lg border border-[var(--color-border)] z-50 overflow-hidden">
+              <Link
+                href="/app/conta"
+                onClick={() => setIsDropdownOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 text-sm font-medium font-onest text-[var(--color-primary-dark)] hover:bg-[var(--color-primary-dark)]/5 transition-colors duration-200 border-b border-[var(--color-border)]"
+              >
+                <Settings className="h-4 w-4" />
+                <span>Minha Conta</span>
+              </Link>
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
@@ -114,6 +122,26 @@ export function Sidebar() {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
+
+          // Lock logic: Bloquear rotas de matérias se não completou onboarding
+          const isLocked = !user?.hasCompletedOnboarding && (
+            item.href === '/app/materias' ||
+            item.href === '/app/novo'
+          );
+
+          if (isLocked) {
+            return (
+              <div
+                key={item.href}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] text-sm font-medium font-onest text-gray-400 cursor-not-allowed opacity-60"
+                title="Finalize o onboarding para acessar"
+              >
+                <Icon className="h-5 w-5" />
+                <span>{item.label}</span>
+                <span className="ml-auto">🔒</span>
+              </div>
+            )
+          }
 
           return (
             <Link
@@ -142,14 +170,14 @@ export function Sidebar() {
                 Plano {user.planName}
               </span>
               <span className="text-xs font-semibold font-all-round text-[var(--color-primary-purple)]">
-                {user.articlesUsed}/{user.maxArticles}
+                {user.articlesUsed}/{user.maxArticles || 1}
               </span>
             </div>
             <div className="w-full bg-[var(--color-primary-dark)]/10 rounded-full h-2">
               <div
                 className="bg-[var(--color-primary-purple)] h-2 rounded-full transition-all duration-300"
                 style={{
-                  width: `${(user.articlesUsed / user.maxArticles) * 100}%`,
+                  width: `${(user.articlesUsed / (user.maxArticles || 1)) * 100}%`,
                 }}
               />
             </div>

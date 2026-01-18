@@ -34,7 +34,8 @@ export default function ProtectedLayout({
 
     // Verificar onboarding
     if (user && !user.hasCompletedOnboarding) {
-      const allowedPaths = ["/app/planos", "/app/onboarding"];
+      // Adicionado /app/conta para permitir acesso à troca de planos/perfil durante onboarding
+      const allowedPaths = ["/app/planos", "/app/onboarding", "/app/conta"];
 
       // Se não está em uma rota permitida, redirecionar
       if (!allowedPaths.includes(pathname)) {
@@ -60,6 +61,12 @@ export default function ProtectedLayout({
     return null;
   }
 
+  // Banner de Lembrete de Onboarding
+  const showOnboardingReminder =
+    user &&
+    !user.hasCompletedOnboarding &&
+    pathname !== "/app/onboarding";
+
   return (
     <div className="flex min-h-screen bg-[var(--color-secondary-cream)]">
       {/* Sidebar Desktop */}
@@ -67,6 +74,27 @@ export default function ProtectedLayout({
 
       {/* Main Content */}
       <main className="flex-1 lg:ml-0 pb-20 lg:pb-0 p-4 md:p-8">
+
+        {/* Reminder Banner */}
+        {showOnboardingReminder && (
+          <div className="mb-6 bg-[var(--color-primary-purple)]/10 border border-[var(--color-primary-purple)]/20 rounded-[var(--radius-sm)] p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-semibold font-all-round text-[var(--color-primary-purple)]">
+                Vamos começar?
+              </h3>
+              <p className="text-xs text-[var(--color-primary-dark)]/70 font-onest mt-1">
+                Finalize o preenchimento das informações para gerar seus primeiros artigos.
+              </p>
+            </div>
+            <button
+              onClick={() => router.push('/app/onboarding')}
+              className="whitespace-nowrap px-4 py-2 bg-[var(--color-primary-purple)] text-white text-xs font-semibold rounded-[var(--radius-sm)] hover:bg-[var(--color-primary-purple)]/90 transition-colors"
+            >
+              Finalizar Onboarding →
+            </button>
+          </div>
+        )}
+
         <div className="max-w-7xl mx-auto">{children}</div>
       </main>
 

@@ -37,7 +37,7 @@ api.interceptors.request.use(
         _t: Date.now()
       }
     }
-    
+
     return config
   },
   (error: AxiosError) => {
@@ -63,7 +63,7 @@ const processQueue = (error: AxiosError | null = null) => {
       prom.resolve()
     }
   })
-  
+
   failedQueue = []
 }
 
@@ -79,11 +79,11 @@ api.interceptors.response.use(
     if (!originalRequest) {
       return Promise.reject(error)
     }
-    
+
     // ============================================
     // HANDLE 401 - TOKEN EXPIRADO
     // ============================================
-    
+
     const requestUrl = String(originalRequest.url || '')
 
     // Nunca tenta refresh recursivo na própria rota de refresh
@@ -91,6 +91,12 @@ api.interceptors.response.use(
       if (typeof window !== 'undefined') {
         window.location.href = '/login'
       }
+      return Promise.reject(error)
+    }
+
+    // Não tenta refresh se o erro for no login (credenciais inválidas) ou registro
+    // Isso permite que o erro específico (401) cheque ao form para exibir o toast correto
+    if (error.response?.status === 401 && (requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register'))) {
       return Promise.reject(error)
     }
 
@@ -107,72 +113,74 @@ api.interceptors.response.use(
             return Promise.reject(err)
           })
       }
-      
+
       originalRequest._retry = true
       isRefreshing = true
-      
+
       try {
         // Tenta fazer refresh do token
         await api.post('/auth/refresh')
-        
+
         processQueue(null)
-        
+
         // Retry a requisição original
         return api(originalRequest)
       } catch (refreshError) {
         processQueue(refreshError as AxiosError)
-        
+
         // Redireciona para login
         if (typeof window !== 'undefined') {
           window.location.href = '/login'
         }
-        
+
         return Promise.reject(refreshError)
       } finally {
         isRefreshing = false
       }
     }
-    
+
     // ============================================
     // HANDLE OUTROS ERROS
     // ============================================
-    
+
     // 403 - Forbidden (sem permissão)
     if (error.response?.status === 403) {
       toast.error('Você não tem permissão para realizar esta ação')
     }
-    
+
     // 404 - Not Found
     if (error.response?.status === 404) {
       toast.error('Recurso não encontrado')
     }
-    
+
     // 422 - Validation Error
-    if (error.response?.status === 422) {
-      const message = error.response.data?.message || 'Dados inválidos'
-      toast.error(message)
-    }
-    
+    // Removido toast global para evitar duplicidade com o tratamento local (useMutation onError)
+    // if (error.response?.status === 422) {
+    //   const message = error.response.data?.message || 'Dados inválidos'
+    //   toast.error(message)
+    // }
+
     // 429 - Rate Limit
-    if (error.response?.status === 429) {
-      toast.error('Muitas requisições. Tente novamente em alguns instantes')
-    }
-    
+    // Removido toast global para evitar duplicidade
+    // if (error.response?.status === 429) {
+    //   toast.error('Muitas requisições. Tente novamente em alguns instantes')
+    // }
+
     // 500+ - Server Error
     if (error.response?.status && error.response.status >= 500) {
       toast.error('Erro no servidor. Tente novamente mais tarde')
     }
-    
+
     // Timeout
     if (error.code === 'ECONNABORTED') {
       toast.error('A requisição demorou muito. Tente novamente')
     }
-    
+
     // Network Error
     if (error.message === 'Network Error') {
       toast.error('Erro de conexão. Verifique sua internet')
     }
-    
+
     return Promise.reject(error)
   }
 )
@@ -194,11 +202,11 @@ export const getErrorMessage = (error: unknown): string => {
       'Erro desconhecido'
     )
   }
-  
+
   if (error instanceof Error) {
     return error.message
   }
-  
+
   return 'Erro desconhecido'
 }
 
@@ -232,7 +240,7 @@ export const uploadFile = async (
 ) => {
   const formData = new FormData()
   formData.append('file', file)
-  
+
   return api.post(url, formData, {
     headers: {
       'Content-Type': 'multipart/form-data'

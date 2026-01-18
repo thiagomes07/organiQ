@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,6 +40,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export default function ContaPage() {
+  const router = useRouter();
   const user = useUser();
   const { updateUser } = useAuthStore();
   const { currentPlan, openPortal, isOpeningPortal } = usePlans();
@@ -232,7 +234,12 @@ export default function ContaPage() {
             >
               Gerenciar Assinatura
             </Button>
-            <Button variant="primary">Fazer Upgrade</Button>
+            <Button
+              variant="primary"
+              onClick={() => router.push('/app/planos')}
+            >
+              Fazer Upgrade
+            </Button>
           </CardFooter>
         </Card>
       </div>

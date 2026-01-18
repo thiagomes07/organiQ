@@ -378,10 +378,10 @@ func main() {
 	if cfg.RateLimit.Enabled {
 		// Global: 1000 req/1min por IP
 		rateLimiters.Global = authMiddleware.NewRateLimiter(1000, time.Minute)
-		// Auth: 5 req/15min por IP
-		rateLimiters.Auth = authMiddleware.NewRateLimiter(5, 15*time.Minute)
-		// Wizard generate/publish: 10 req/1h por User
-		rateLimiters.Wizard = authMiddleware.NewRateLimiter(10, time.Hour)
+		// Auth: 30 req/15min por IP (Ajustado para permitir mais tentativas legítimas)
+		rateLimiters.Auth = authMiddleware.NewRateLimiter(30, 15*time.Minute)
+		// Wizard generate/publish: 30 req/1h por User (Ajustado para permitir iteração na criação)
+		rateLimiters.Wizard = authMiddleware.NewRateLimiter(30, time.Hour)
 		// Articles: 100 req/1min por User
 		rateLimiters.Articles = authMiddleware.NewRateLimiter(100, time.Minute)
 	}

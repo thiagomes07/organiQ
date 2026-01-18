@@ -125,7 +125,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	// 5. Responder
 	planName := "Free"
-	maxArticles := 0
+	maxArticles := h.getMaxArticles(r.Context(), output.User.PlanID.String())
 
 	// Se temos plan ID, poderia buscar name do plano
 	// Por simplicidade, usamos "Free" para novo usuário

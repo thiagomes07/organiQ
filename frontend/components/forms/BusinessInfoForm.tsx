@@ -35,21 +35,28 @@ export function BusinessInfoForm({
   const user = useUser();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  // Plan Limits Logic
+  const maxArticles = user?.maxArticles || 1; // Default to 1 if missing
+  const articlesUsed = user?.articlesUsed || 0;
+  const articlesRemaining = Math.max(0, maxArticles - articlesUsed);
+  const isLimitReached = articlesRemaining === 0;
+
   const {
     register,
     handleSubmit,
     watch,
     setValue,
     control,
+    setError,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(businessSchema),
     defaultValues: {
       description: "",
-      primaryObjective: "leads", // Adding explicit default to prevent 'undefined' issues
+      primaryObjective: "leads",
       hasBlog: false,
       blogUrls: [],
-      articleCount: 1,
+      articleCount: isLimitReached ? 0 : 1, // Start with 1 valid if possible
       location: {
         country: "",
         state: "",
@@ -57,9 +64,9 @@ export function BusinessInfoForm({
         hasMultipleUnits: false,
         units: [],
       },
-      siteUrl: "", // This matches the "" literal or optional string
+      siteUrl: "",
       ...defaultValues,
-    } as any, // Cast defaultValues to any to bypass strict partial checks during init
+    } as any,
   });
 
   const watchPrimaryObjective = watch("primaryObjective");
@@ -84,8 +91,20 @@ export function BusinessInfoForm({
     console.log('[BusinessInfoForm] Validation errors:', errors);
   };
 
+  const handleInternalSubmit = (data: BusinessInput) => {
+    // Validação de limite de plano no frontend
+    if (data.articleCount > articlesRemaining) {
+      setError("articleCount", {
+        type: "manual",
+        message: `Seu plano permite apenas ${articlesRemaining} novas matérias. Faça um upgrade para gerar mais.`
+      });
+      return;
+    }
+    onSubmit(data);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-6">
+    <form onSubmit={handleSubmit(handleInternalSubmit, onFormError)} className="space-y-6">
       {/* Descrição do Negócio */}
       <div className="space-y-2">
         <Label htmlFor="description" required>
@@ -241,19 +260,41 @@ export function BusinessInfoForm({
       )}
 
       {/* Quantidade de Matérias */}
-      <div className="space-y-2">
-        <Label required>Quantas matérias deseja criar?</Label>
-        <Slider
-          min={1}
-          max={user?.maxArticles || 50}
-          step={1}
-          value={[watchArticleCount || 1]}
-          onValueChange={(value) => setValue("articleCount", value[0])}
-          showValue
-          formatValue={(value) =>
-            `${value} ${value === 1 ? "matéria" : "matérias"}`
-          }
-        />
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label required>Quantas matérias deseja criar?</Label>
+          <div className="text-right">
+            <span className={isLimitReached ? "text-[var(--color-error)] text-xs font-bold" : "text-[var(--color-primary-purple)] text-xs font-bold"}>
+              {articlesRemaining} créditos disponíveis
+            </span>
+            <br />
+            <a href="/app/conta" className="text-[10px] underline text-[var(--color-primary-dark)]/60 hover:text-[var(--color-primary-purple)]">
+              Aumentar limite
+            </a>
+          </div>
+        </div>
+
+        {isLimitReached ? (
+          <div className="p-3 bg-[var(--color-error)]/10 border border-[var(--color-error)]/20 rounded-[var(--radius-sm)]">
+            <p className="text-xs text-[var(--color-error)] font-onest">
+              Você atingiu o limite de matérias do seu plano. <br />
+              <a href="/app/conta" className="underline font-bold">Faça upgrade agora</a> para continuar gerando conteúdo.
+            </p>
+          </div>
+        ) : (
+          <Slider
+            min={1}
+            max={articlesRemaining} // Limita ao restante
+            step={1}
+            value={[watchArticleCount || 1]}
+            onValueChange={(value) => setValue("articleCount", value[0])}
+            showValue
+            formatValue={(value) =>
+              `${value} ${value === 1 ? "ma    téria" : "matérias"}`
+            }
+          />
+        )}
+
         {errors.articleCount && (
           <p className="text-xs text-[var(--color-error)] font-onest">
             {errors.articleCount.message as string}
