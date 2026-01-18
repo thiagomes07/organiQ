@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useWizard } from '@/hooks/useWizard'
 import { StepIndicator } from './StepIndicator'
 import { BusinessInfoForm } from '@/components/forms/BusinessInfoForm'
@@ -10,6 +11,7 @@ import { LoadingOverlay } from '@/components/shared/LoadingSpinner'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { MessageSquare, FileCheck } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { BusinessInput, CompetitorsInput, IntegrationsInput } from '@/lib/validations'
 
 const steps = [
@@ -57,6 +59,9 @@ export function OnboardingWizard() {
     canPublish,
   } = useWizard(true) // true = isOnboarding
 
+  // Estado para modal de confirmação
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+
   // Loading state inicial enquanto busca dados do wizard
   if (isLoadingWizardData || !isInitialized) {
     return <LoadingOverlay messages={['Carregando seus dados...', 'Verificando progresso...']} />
@@ -85,6 +90,7 @@ export function OnboardingWizard() {
         }))
 
       publishArticles({ articles: approvedArticles })
+      setShowConfirmDialog(false)
     }
 
     return (
@@ -103,13 +109,14 @@ export function OnboardingWizard() {
         <StepIndicator currentStep={currentStep} steps={steps} />
 
         {/* Articles Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="columns-1 md:columns-2 gap-4 space-y-4">
           {articleIdeas.map((idea) => (
-            <ArticleIdeaCard
-              key={idea.id}
-              idea={idea}
-              onUpdate={updateArticleIdea}
-            />
+            <div key={idea.id} className="break-inside-avoid mb-4">
+              <ArticleIdeaCard
+                idea={idea}
+                onUpdate={updateArticleIdea}
+              />
+            </div>
           ))}
         </div>
 
@@ -143,7 +150,7 @@ export function OnboardingWizard() {
               <Button
                 variant="primary"
                 size="lg"
-                onClick={handlePublish}
+                onClick={() => setShowConfirmDialog(true)}
                 disabled={!canPublish}
                 title={!canPublish ? 'Aprove pelo menos uma matéria' : undefined}
                 className="bg-[var(--color-primary-purple)] hover:bg-[var(--color-primary-purple)]/90"
@@ -160,6 +167,62 @@ export function OnboardingWizard() {
             Passo {currentStep} de {steps.length}
           </p>
         </div>
+
+        {/* Confirmation Dialog */}
+        <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmar Publicação</DialogTitle>
+              <DialogDescription>
+                Você está prestes a publicar {approvedCount} matéria{approvedCount !== 1 ? 's' : ''} no seu WordPress.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="bg-[var(--color-secondary-cream)]/50 rounded-[var(--radius-md)] p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-onest text-[var(--color-primary-dark)]/70">
+                    Matérias aprovadas:
+                  </span>
+                  <span className="text-sm font-semibold font-all-round text-[var(--color-primary-dark)]">
+                    {approvedCount}
+                  </span>
+                </div>
+                {feedbackCount > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-onest text-[var(--color-primary-dark)]/70">
+                      Com direcionamentos:
+                    </span>
+                    <span className="text-sm font-semibold font-all-round text-[var(--color-primary-purple)]">
+                      {feedbackCount}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-sm font-onest text-[var(--color-primary-dark)]/70">
+                As matérias serão escritas com IA e publicadas automaticamente no seu blog WordPress.
+                Este processo pode levar alguns minutos.
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowConfirmDialog(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handlePublish}
+                className="bg-[var(--color-primary-purple)] hover:bg-[var(--color-primary-purple)]/90"
+              >
+                Confirmar Publicação
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     )
   }

@@ -4,6 +4,7 @@ package wizard
 import (
 	"context"
 	"errors"
+	"os"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -164,14 +165,20 @@ func (uc *SaveIntegrationsUseCase) processWordPress(
 		return errors.New("appPassword é obrigatório")
 	}
 
-	// 2. Testar conexão com WordPress
-	log.Debug().Str("siteUrl", input.SiteURL).Msg("Testando conexão com WordPress")
-	wpClient := wordpress.NewClient(input.SiteURL, input.Username, input.AppPassword)
+	// 2. Testar conexão com WordPress (bypass em modo mock)
+	if os.Getenv("MOCK_WORDPRESS") == "true" {
+		log.Warn().
+			Str("siteUrl", input.SiteURL).
+			Msg("⚠️  MOCK_WORDPRESS=true - Pulando teste de conexão com WordPress")
+	} else {
+		log.Debug().Str("siteUrl", input.SiteURL).Msg("Testando conexão com WordPress")
+		wpClient := wordpress.NewClient(input.SiteURL, input.Username, input.AppPassword)
 
-	if err := wpClient.TestConnection(ctx); err != nil {
-		log.Error().Err(err).Msg("Erro ao conectar com WordPress")
-		output.Errors["wordpress"] = "Falha ao conectar com WordPress. Verifique as credenciais."
-		return err
+		if err := wpClient.TestConnection(ctx); err != nil {
+			log.Error().Err(err).Msg("Erro ao conectar com WordPress")
+			output.Errors["wordpress"] = "Falha ao conectar com WordPress. Verifique as credenciais."
+			return err
+		}
 	}
 
 	// 3. Criptografar app password

@@ -29,12 +29,22 @@ type BusinessDataOutput struct {
 	BrandFileURL       *string          `json:"brandFileUrl,omitempty"`
 }
 
+// PendingIdeaOutput dados de uma ideia pendente
+type PendingIdeaOutput struct {
+	ID       string  `json:"id"`
+	Title    string  `json:"title"`
+	Summary  string  `json:"summary"`
+	Approved bool    `json:"approved"`
+	Feedback *string `json:"feedback,omitempty"`
+}
+
 // GetWizardDataOutput dados de saída
 type GetWizardDataOutput struct {
 	OnboardingStep int                 `json:"onboardingStep"`
 	Business       *BusinessDataOutput `json:"business,omitempty"`
 	Competitors    []string            `json:"competitors,omitempty"`
 	HasIntegration bool                `json:"hasIntegration"`
+	PendingIdeas   []PendingIdeaOutput `json:"pendingIdeas,omitempty"`
 }
 
 // GetWizardDataUseCase implementa o caso de uso
@@ -42,6 +52,7 @@ type GetWizardDataUseCase struct {
 	userRepo        repository.UserRepository
 	businessRepo    repository.BusinessRepository
 	integrationRepo repository.IntegrationRepository
+	articleIdeaRepo repository.ArticleIdeaRepository
 }
 
 // NewGetWizardDataUseCase cria nova instância
@@ -49,11 +60,13 @@ func NewGetWizardDataUseCase(
 	userRepo repository.UserRepository,
 	businessRepo repository.BusinessRepository,
 	integrationRepo repository.IntegrationRepository,
+	articleIdeaRepo repository.ArticleIdeaRepository,
 ) *GetWizardDataUseCase {
 	return &GetWizardDataUseCase{
 		userRepo:        userRepo,
 		businessRepo:    businessRepo,
 		integrationRepo: integrationRepo,
+		articleIdeaRepo: articleIdeaRepo,
 	}
 }
 
@@ -115,12 +128,35 @@ func (uc *GetWizardDataUseCase) Execute(ctx context.Context, input GetWizardData
 	wpIntegration, err := uc.integrationRepo.FindByUserIDAndType(ctx, userID, entity.IntegrationTypeWordPress)
 	output.HasIntegration = err == nil && wpIntegration != nil && wpIntegration.Enabled
 
+	// 6. Buscar ideias de artigos pendentes (se o usuário estiver no step 4)
+	if user.OnboardingStep >= 4 {
+		ideas, err := uc.articleIdeaRepo.FindByUserID(ctx, userID)
+		if err == nil && len(ideas) > 0 {
+			output.PendingIdeas = make([]PendingIdeaOutput, 0, len(ideas))
+			for _, idea := range ideas {
+				var feedback *string
+				if idea.Feedback != nil {
+					feedback = idea.Feedback
+				}
+				output.PendingIdeas = append(output.PendingIdeas, PendingIdeaOutput{
+					ID:       idea.ID.String(),
+					Title:    idea.Title,
+					Summary:  idea.Summary,
+					Approved: idea.Approved,
+					Feedback: feedback,
+				})
+			}
+			log.Debug().Int("ideas_count", len(output.PendingIdeas)).Msg("GetWizardDataUseCase: ideias pendentes encontradas")
+		}
+	}
+
 	log.Info().
 		Str("user_id", input.UserID).
 		Int("onboarding_step", output.OnboardingStep).
 		Bool("has_business", output.Business != nil).
 		Int("competitors_count", len(output.Competitors)).
 		Bool("has_integration", output.HasIntegration).
+		Int("pending_ideas_count", len(output.PendingIdeas)).
 		Msg("GetWizardDataUseCase bem-sucedido")
 
 	return output, nil

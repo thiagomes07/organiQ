@@ -75,35 +75,7 @@ func main() {
 	log.Info().Msg("Database migrations completed")
 
 	// ============================================
-	// INICIALIZAR SERVIÇOS INFRAESTRUTURA
-	// ============================================
-
-	// Crypto service
-	cryptoService := util.NewCryptoService(
-		cfg.Auth.PasswordPepper,
-		cfg.Auth.JWTSecret,
-	)
-
-	// Storage service
-	storageService, err := storage.NewStorageService(cfg)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to initialize storage service")
-	}
-	log.Info().Msg("Storage service initialized")
-
-	// Queue service
-	queueService, err := queue.NewQueueService(cfg)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to initialize queue service")
-	}
-	log.Info().Msg("Queue service initialized")
-
-	// AI agent client
-	agentClient := ai.NewAgentClient(cfg)
-	log.Info().Msg("AI agent client initialized")
-
-	// ============================================
-	// REPOSITORIES
+	// REPOSITORIES (criados antes do QueueService para suportar MockQueue)
 	// ============================================
 
 	repositories := &struct {
@@ -129,6 +101,42 @@ func main() {
 	}
 
 	log.Info().Msg("All repositories initialized")
+
+	// ============================================
+	// INICIALIZAR SERVIÇOS INFRAESTRUTURA
+	// ============================================
+
+	// Crypto service
+	cryptoService := util.NewCryptoService(
+		cfg.Auth.PasswordPepper,
+		cfg.Auth.JWTSecret,
+	)
+
+	// Storage service
+	storageService, err := storage.NewStorageService(cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize storage service")
+	}
+	log.Info().Msg("Storage service initialized")
+
+	// Queue service - agora com suporte a MockQueue
+	// Se MOCK_AI_GENERATION=true, usa MockQueue que simula processamento com delay de 30s
+	queueService, err := queue.NewQueueServiceWithMock(cfg, queue.MockQueueDependencies{
+		ArticleJobRepo:  repositories.ArticleJob,
+		ArticleIdeaRepo: repositories.ArticleIdea,
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize queue service")
+	}
+
+	if queue.IsMockModeEnabled() {
+		log.Warn().Msg("🚧 MODO MOCK ATIVO - Geração de ideias será simulada")
+	}
+	log.Info().Msg("Queue service initialized")
+
+	// AI agent client
+	agentClient := ai.NewAgentClient(cfg)
+	log.Info().Msg("AI agent client initialized")
 
 	// ============================================
 	// USE CASES: AUTH
@@ -200,6 +208,7 @@ func main() {
 		repositories.User,
 		repositories.Business,
 		repositories.Integration,
+		repositories.ArticleIdea,
 	)
 
 	// ============================================

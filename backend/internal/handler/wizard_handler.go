@@ -53,12 +53,22 @@ func NewWizardHandler(
 // GET /api/wizard/data
 // ============================================
 
+// PendingIdeaResponse resposta de uma ideia pendente
+type PendingIdeaResponse struct {
+	ID       string  `json:"id"`
+	Title    string  `json:"title"`
+	Summary  string  `json:"summary"`
+	Approved bool    `json:"approved"`
+	Feedback *string `json:"feedback,omitempty"`
+}
+
 // GetWizardDataResponse response body
 type GetWizardDataResponse struct {
 	OnboardingStep int                       `json:"onboardingStep"`
 	Business       *wizard.BusinessDataOutput `json:"business,omitempty"`
 	Competitors    []string                  `json:"competitors,omitempty"`
 	HasIntegration bool                      `json:"hasIntegration"`
+	PendingIdeas   []PendingIdeaResponse     `json:"pendingIdeas,omitempty"`
 }
 
 // GetWizardData implementa GET /api/wizard/data
@@ -89,12 +99,28 @@ func (h *WizardHandler) GetWizardData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Responder
+	// 3. Converter pending ideas para response
+	var pendingIdeas []PendingIdeaResponse
+	if len(output.PendingIdeas) > 0 {
+		pendingIdeas = make([]PendingIdeaResponse, len(output.PendingIdeas))
+		for i, idea := range output.PendingIdeas {
+			pendingIdeas[i] = PendingIdeaResponse{
+				ID:       idea.ID,
+				Title:    idea.Title,
+				Summary:  idea.Summary,
+				Approved: idea.Approved,
+				Feedback: idea.Feedback,
+			}
+		}
+	}
+
+	// 4. Responder
 	response := GetWizardDataResponse{
 		OnboardingStep: output.OnboardingStep,
 		Business:       output.Business,
 		Competitors:    output.Competitors,
 		HasIntegration: output.HasIntegration,
+		PendingIdeas:   pendingIdeas,
 	}
 
 	util.RespondJSON(w, http.StatusOK, response)

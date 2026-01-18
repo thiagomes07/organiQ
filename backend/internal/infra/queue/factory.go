@@ -3,6 +3,7 @@ package queue
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -11,10 +12,21 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"organiq/config"
+	"organiq/internal/domain/repository"
 )
+
+// MockQueueDependencies contém as dependências necessárias para criar um MockQueue
+// Separado para manter a factory original sem mudanças de assinatura
+type MockQueueDependencies struct {
+	ArticleJobRepo  repository.ArticleJobRepository
+	ArticleIdeaRepo repository.ArticleIdeaRepository
+	ProcessingDelay time.Duration // Opcional: padrão 30s
+}
 
 // NewQueueService cria nova instância de QueueService baseado em configuração
 // Se QUEUE_ENABLED=false ou não houver endpoint configurado, retorna NoOpQueue
+//
+// NOTA: Esta função não suporta MockQueue. Use NewQueueServiceWithMock para desenvolvimento.
 func NewQueueService(cfg *config.Config) (QueueService, error) {
 	log.Info().Msg("Inicializando Queue Service")
 
@@ -75,6 +87,43 @@ func NewQueueService(cfg *config.Config) (QueueService, error) {
 	return queue, nil
 }
 
+// NewQueueServiceWithMock cria QueueService com suporte a MockQueue
+// Se MOCK_AI_GENERATION=true, retorna MockQueue que simula processamento assíncrono
+// Caso contrário, comporta-se como NewQueueService normal
+//
+// Uso:
+//
+//	queueService, err := queue.NewQueueServiceWithMock(cfg, queue.MockQueueDependencies{
+//	    ArticleJobRepo:  repositories.ArticleJob,
+//	    ArticleIdeaRepo: repositories.ArticleIdea,
+//	})
+func NewQueueServiceWithMock(cfg *config.Config, deps MockQueueDependencies) (QueueService, error) {
+	// Verificar se mock está habilitado
+	if os.Getenv("MOCK_AI_GENERATION") == "true" {
+		log.Warn().Msg("⚠️  MOCK_AI_GENERATION=true - usando MockQueue para desenvolvimento")
+
+		if deps.ArticleJobRepo == nil || deps.ArticleIdeaRepo == nil {
+			log.Error().Msg("MockQueue requer ArticleJobRepo e ArticleIdeaRepo")
+			return NewNoOpQueue(), nil
+		}
+
+		return NewMockQueue(MockQueueConfig{
+			ArticleJobRepo:  deps.ArticleJobRepo,
+			ArticleIdeaRepo: deps.ArticleIdeaRepo,
+			ProcessingDelay: deps.ProcessingDelay,
+		}), nil
+	}
+
+	// Caso contrário, usar factory padrão
+	return NewQueueService(cfg)
+}
+
+// IsMockModeEnabled verifica se o modo mock está ativo
+// Útil para logging e debugging
+func IsMockModeEnabled() bool {
+	return os.Getenv("MOCK_AI_GENERATION") == "true"
+}
+
 // newSQSClient cria cliente SQS com endpoint customizável
 func newSQSClient(cfg *config.Config) (*sqs.Client, error) {
 	log.Debug().Msg("Criando cliente SQS")
@@ -107,3 +156,4 @@ func newSQSClient(cfg *config.Config) (*sqs.Client, error) {
 
 	return client, nil
 }
+

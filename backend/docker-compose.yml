@@ -51,6 +51,12 @@ services:
       # Logger
       - LOG_LEVEL=debug
       - LOG_FORMAT=console
+      
+      # Mock Mode (desenvolvimento)
+      # Simula geração de ideias sem AI real (delay de ~30s)
+      - MOCK_AI_GENERATION=true
+      # Bypassa validação de conexão WordPress
+      - MOCK_WORDPRESS=true
     depends_on:
       postgres:
         condition: service_healthy

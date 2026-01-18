@@ -40,6 +40,9 @@ export default function ProtectedLayout({
       if (!allowedPaths.includes(pathname)) {
         router.push("/app/planos");
       }
+    } else if (user && user.hasCompletedOnboarding && pathname === "/app/onboarding") {
+      // Se já completou onboarding e tenta acessar, redirecionar para dashboard
+      router.push("/app/materias");
     }
   }, [isAuthenticated, isLoading, isHydrated, user, pathname, router]);
 

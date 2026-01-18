@@ -107,6 +107,13 @@ const wizardApi = {
     };
     competitors?: string[];
     hasIntegration: boolean;
+    pendingIdeas?: Array<{
+      id: string;
+      title: string;
+      summary: string;
+      approved: boolean;
+      feedback?: string;
+    }>;
   }> => {
     const { data } = await api.get("/wizard/data");
     return data;
@@ -211,6 +218,18 @@ export function useWizard(isOnboarding: boolean = true) {
         });
       }
 
+      // Preencher ideias de artigos pendentes se existir
+      if (data.pendingIdeas && data.pendingIdeas.length > 0) {
+        console.log('[useWizard] Preenchendo articleIdeas:', data.pendingIdeas.length, 'ideias');
+        setArticleIdeas(data.pendingIdeas.map(idea => ({
+          id: idea.id,
+          title: idea.title,
+          summary: idea.summary,
+          approved: idea.approved,
+          feedback: idea.feedback || '',
+        })));
+      }
+
       setIsInitialized(true);
       console.log('[useWizard] Inicialização completa');
     }
@@ -301,6 +320,9 @@ export function useWizard(isOnboarding: boolean = true) {
     queryKey: ["ideas-status", jobId],
     queryFn: () => wizardApi.getIdeasStatus(jobId!),
     enabled: !!jobId && currentStep === 999,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     refetchInterval: (query) => {
       if (ideasStartedAtRef.current && Date.now() - ideasStartedAtRef.current > IDEAS_TIMEOUT_MS) {
         toast.error("Tempo limite ao gerar ideias. Tente novamente.");
@@ -308,7 +330,14 @@ export function useWizard(isOnboarding: boolean = true) {
         return false;
       }
       if (query.state.data?.status === "completed") {
-        setArticleIdeas(query.state.data.ideas || []);
+        // Só atualizar articleIdeas se estiver vazio (primeira vez)
+        // Isso preserva as aprovações do usuário
+        if (articleIdeas.length === 0) {
+          console.log('[useWizard] Setting initial article ideas from API');
+          setArticleIdeas(query.state.data.ideas || []);
+        } else {
+          console.log('[useWizard] Skipping article ideas update - already loaded');
+        }
         setCurrentStep(isOnboarding ? 4 : 3); // Vai para aprovação
         return false;
       }
@@ -319,7 +348,6 @@ export function useWizard(isOnboarding: boolean = true) {
       }
       return 3000; // Poll a cada 3 segundos
     },
-    refetchOnWindowFocus: false,
   });
 
   // ============================================
