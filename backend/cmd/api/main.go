@@ -194,8 +194,10 @@ func main() {
 
 	generateIdeasUC := wizard.NewGenerateIdeasUseCase(
 		repositories.User,
+		repositories.Plan,
 		repositories.Business,
 		repositories.ArticleJob,
+		repositories.ArticleIdea,
 		queueService,
 	)
 
@@ -207,6 +209,7 @@ func main() {
 
 	getWizardDataUC := wizard.NewGetWizardDataUseCase(
 		repositories.User,
+		repositories.Plan,
 		repositories.Business,
 		repositories.Integration,
 		repositories.ArticleIdea,
