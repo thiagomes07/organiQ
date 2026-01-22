@@ -71,6 +71,7 @@ type GetWizardDataResponse struct {
 	Business               *wizard.BusinessDataOutput `json:"business,omitempty"`
 	Competitors            []string                   `json:"competitors,omitempty"`
 	HasIntegration         bool                       `json:"hasIntegration"`
+	IntegrationData        *wizard.IntegrationDataOutput `json:"integrationData,omitempty"`
 	PendingIdeas           []PendingIdeaResponse      `json:"pendingIdeas,omitempty"`
 	HasGeneratedIdeas      bool                       `json:"hasGeneratedIdeas"`
 	TotalIdeasCount        int                        `json:"totalIdeasCount"`
@@ -129,6 +130,7 @@ func (h *WizardHandler) GetWizardData(w http.ResponseWriter, r *http.Request) {
 		Business:               output.Business,
 		Competitors:            output.Competitors,
 		HasIntegration:         output.HasIntegration,
+		IntegrationData:        output.IntegrationData,
 		PendingIdeas:           pendingIdeas,
 		HasGeneratedIdeas:      output.HasGeneratedIdeas,
 		TotalIdeasCount:        output.TotalIdeasCount,

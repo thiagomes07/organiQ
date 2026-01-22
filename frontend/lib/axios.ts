@@ -195,12 +195,17 @@ api.interceptors.response.use(
 export const getErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiErrorResponse>
-    return (
-      axiosError.response?.data?.message ||
+    const message = axiosError.response?.data?.message ||
       axiosError.response?.data?.error ||
       axiosError.message ||
       'Erro desconhecido'
-    )
+
+    // Tratamento específico para erros de validação do Go (backend)
+    if (message.includes("Key: 'RegisterRequest.Password'") && message.includes("'min' tag")) {
+      return "A senha deve ter no mínimo 8 caracteres"
+    }
+
+    return message
   }
 
   if (error instanceof Error) {

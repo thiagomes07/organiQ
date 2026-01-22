@@ -15,8 +15,8 @@ interface PasswordRule {
 const passwordRules: PasswordRule[] = [
   {
     id: "minLength",
-    label: "Mínimo de 6 caracteres",
-    test: (pwd) => pwd.length >= 6,
+    label: "Mínimo de 8 caracteres",
+    test: (pwd) => pwd.length >= 8,
   },
   {
     id: "hasUpperCase",

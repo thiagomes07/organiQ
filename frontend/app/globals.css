@@ -96,4 +96,10 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  .text-security-disc {
+    -webkit-text-security: disc;
+    /* Fallback for Firefox (not perfect, but better than nothing if needed later) */
+    /* font-family: text-security-disc; */
+  }
 }

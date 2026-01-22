@@ -38,19 +38,41 @@ type PendingIdeaOutput struct {
 	Feedback *string `json:"feedback,omitempty"`
 }
 
+// IntegrationDataOutput dados das integrações
+type IntegrationDataOutput struct {
+	WordPress     *WordPressConfigOutput     `json:"wordpress,omitempty"`
+	SearchConsole *SearchConsoleConfigOutput `json:"searchConsole,omitempty"`
+	Analytics     *AnalyticsConfigOutput     `json:"analytics,omitempty"`
+}
+
+type WordPressConfigOutput struct {
+	SiteURL     string `json:"siteUrl"`
+	Username    string `json:"username"`
+	AppPassword string `json:"appPassword"`
+}
+
+type SearchConsoleConfigOutput struct {
+	PropertyURL string `json:"propertyUrl"`
+}
+
+type AnalyticsConfigOutput struct {
+	MeasurementID string `json:"measurementId"`
+}
+
 // GetWizardDataOutput dados de saída
 type GetWizardDataOutput struct {
-	OnboardingStep         int                 `json:"onboardingStep"`
-	Business               *BusinessDataOutput `json:"business,omitempty"`
-	Competitors            []string            `json:"competitors,omitempty"`
-	HasIntegration         bool                `json:"hasIntegration"`
-	PendingIdeas           []PendingIdeaOutput `json:"pendingIdeas,omitempty"`
-	HasGeneratedIdeas      bool                `json:"hasGeneratedIdeas"`
-	TotalIdeasCount        int                 `json:"totalIdeasCount"`
-	ApprovedIdeasCount     int                 `json:"approvedIdeasCount"`
-	RegenerationsRemaining int                 `json:"regenerationsRemaining"`
-	RegenerationsLimit     int                 `json:"regenerationsLimit"`
-	NextRegenerationAt     *string             `json:"nextRegenerationAt,omitempty"`
+	OnboardingStep         int                    `json:"onboardingStep"`
+	Business               *BusinessDataOutput    `json:"business,omitempty"`
+	Competitors            []string               `json:"competitors,omitempty"`
+	HasIntegration         bool                   `json:"hasIntegration"`
+	IntegrationData        *IntegrationDataOutput `json:"integrationData,omitempty"`
+	PendingIdeas           []PendingIdeaOutput    `json:"pendingIdeas,omitempty"`
+	HasGeneratedIdeas      bool                   `json:"hasGeneratedIdeas"`
+	TotalIdeasCount        int                    `json:"totalIdeasCount"`
+	ApprovedIdeasCount     int                    `json:"approvedIdeasCount"`
+	RegenerationsRemaining int                    `json:"regenerationsRemaining"`
+	RegenerationsLimit     int                    `json:"regenerationsLimit"`
+	NextRegenerationAt     *string                `json:"nextRegenerationAt,omitempty"`
 }
 
 // GetWizardDataUseCase implementa o caso de uso
@@ -82,6 +104,8 @@ func NewGetWizardDataUseCase(
 // Execute executa o caso de uso
 func (uc *GetWizardDataUseCase) Execute(ctx context.Context, input GetWizardDataInput) (*GetWizardDataOutput, error) {
 	log.Debug().Str("user_id", input.UserID).Msg("GetWizardDataUseCase Execute iniciado")
+
+	// ... (Parsing logic remains same until retrieving integrations)
 
 	// 1. Parse user_id
 	userID, err := uuid.Parse(input.UserID)
@@ -140,9 +164,45 @@ func (uc *GetWizardDataUseCase) Execute(ctx context.Context, input GetWizardData
 		output.Competitors = competitors
 	}
 
-	// 5. Verificar se tem integração WordPress
-	wpIntegration, err := uc.integrationRepo.FindByUserIDAndType(ctx, userID, entity.IntegrationTypeWordPress)
-	output.HasIntegration = err == nil && wpIntegration != nil && wpIntegration.Enabled
+	// 5. Buscar integrações (todas)
+	integrations, err := uc.integrationRepo.FindByUserID(ctx, userID)
+	if err == nil && len(integrations) > 0 {
+		output.IntegrationData = &IntegrationDataOutput{}
+		hasIntegration := false
+
+		for _, inte := range integrations {
+			if inte.Enabled {
+				if inte.Type == entity.IntegrationTypeWordPress {
+					hasIntegration = true // Só conta WordPress como "HasIntegration" principal para o Wizard logic
+				}
+			}
+			
+			// Popula IntegrationData mesmo se não estiver enabled, para persistencia
+			switch inte.Type {
+			case entity.IntegrationTypeWordPress:
+				if cfg, err := inte.GetWordPressConfig(); err == nil {
+					output.IntegrationData.WordPress = &WordPressConfigOutput{
+						SiteURL:     cfg.SiteURL,
+						Username:    cfg.Username,
+						AppPassword: cfg.AppPassword,
+					}
+				}
+			case entity.IntegrationTypeSearchConsole:
+				if cfg, err := inte.GetSearchConsoleConfig(); err == nil {
+					output.IntegrationData.SearchConsole = &SearchConsoleConfigOutput{
+						PropertyURL: cfg.PropertyURL,
+					}
+				}
+			case entity.IntegrationTypeAnalytics:
+				if cfg, err := inte.GetAnalyticsConfig(); err == nil {
+					output.IntegrationData.Analytics = &AnalyticsConfigOutput{
+						MeasurementID: cfg.MeasurementID,
+					}
+				}
+			}
+		}
+		output.HasIntegration = hasIntegration
+	}
 
 	// 6. Dados de ideias e regeneração
 	// Contar gerações na última hora

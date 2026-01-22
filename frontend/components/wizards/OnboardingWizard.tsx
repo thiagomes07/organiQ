@@ -68,6 +68,7 @@ export function OnboardingWizard() {
 
   // Estado para modal de confirmação
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false)
 
   // Loading state inicial enquanto busca dados do wizard
   if (isLoadingWizardData || !isInitialized) {
@@ -99,6 +100,15 @@ export function OnboardingWizard() {
       publishArticles({ articles: approvedArticles })
       setShowConfirmDialog(false)
     }
+
+    const handleRegenerateConfirm = () => {
+      regenerateIdeas()
+      setShowRegenerateDialog(false)
+    }
+
+    const unapprovedWithFeedback = articleIdeas.filter(
+      (idea) => !idea.approved && idea.feedback && idea.feedback.trim().length > 0
+    ).length
 
     return (
       <div className="space-y-6">
@@ -165,7 +175,7 @@ export function OnboardingWizard() {
               {!allApproved && (
                 <Button
                   variant="outline"
-                  onClick={regenerateIdeas}
+                  onClick={() => setShowRegenerateDialog(true)}
                   disabled={!canRegenerateIdeas || isGeneratingIdeas}
                   className="text-[var(--color-primary-purple)] border-[var(--color-primary-purple)] hover:bg-[var(--color-primary-purple)]/5"
                 >
@@ -198,6 +208,60 @@ export function OnboardingWizard() {
             Passo {currentStep} de {steps.length}
           </p>
         </div>
+
+        {/* Regenerate Confirmation Dialog */}
+        <Dialog open={showRegenerateDialog} onOpenChange={setShowRegenerateDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Regenerar Ideias de Matérias?</DialogTitle>
+              <DialogDescription>
+                Esta ação irá substituir as ideias não aprovadas por novas sugestões.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30 rounded-[var(--radius-md)] p-4 space-y-2">
+                <p className="text-sm font-medium font-onest text-[var(--color-warning)]">
+                  ⚠️ Atenção
+                </p>
+                <p className="text-sm font-onest text-[var(--color-primary-dark)]/80">
+                  As ideias <strong>não aprovadas</strong> serão <strong>permanentemente removidas</strong>, incluindo quaisquer sugestões ou direcionamentos que você tenha adicionado.
+                </p>
+                {unapprovedWithFeedback > 0 && (
+                  <p className="text-sm font-semibold font-onest text-[var(--color-error)] mt-2">
+                    Você perderá {unapprovedWithFeedback} sugestão{unapprovedWithFeedback !== 1 ? 'ões' : ''} que adicionou!
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-[var(--color-success)]/10 border border-[var(--color-success)]/30 rounded-[var(--radius-md)] p-4">
+                <p className="text-sm font-onest text-[var(--color-primary-dark)]/80">
+                  ✅ As ideias <strong>aprovadas</strong> serão mantidas e combinadas com as novas sugestões.
+                </p>
+              </div>
+
+              <p className="text-xs font-onest text-[var(--color-primary-dark)]/60">
+                Regenerações restantes: {regenerationsRemaining}/{regenerationsLimit}
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowRegenerateDialog(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleRegenerateConfirm}
+                className="bg-[var(--color-primary-purple)] hover:bg-[var(--color-primary-purple)]/90"
+              >
+                Sim, Regenerar Ideias
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Confirmation Dialog */}
         <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>

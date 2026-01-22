@@ -70,10 +70,16 @@ type AccountPlanResponse struct {
 
 // IntegrationStatusResponse resume uma integração configurada.
 type IntegrationStatusResponse struct {
-	Type        string `json:"type"`
-	Enabled     bool   `json:"enabled"`
-	Configured  bool   `json:"configured"`
-	LastUpdated string `json:"lastUpdated,omitempty"`
+	Type        string                 `json:"type"`
+	Enabled     bool                   `json:"enabled"`
+	Configured  bool                   `json:"configured"`
+	LastUpdated string                 `json:"lastUpdated,omitempty"`
+	// Configurações públicas (necessário para o formulário de configurações)
+	SiteURL       *string `json:"siteUrl,omitempty"`
+	Username      *string `json:"username,omitempty"`
+	AppPassword   *string `json:"appPassword,omitempty"` // Cuidado: retornando senha
+	PropertyURL   *string `json:"propertyUrl,omitempty"`
+	MeasurementID *string `json:"measurementId,omitempty"`
 }
 
 // AccountResponse agrega todos os dados da conta.
@@ -350,12 +356,33 @@ func buildIntegrationStatuses(integrations []*entity.Integration) []IntegrationS
 		if integration == nil {
 			continue
 		}
-		typeMap[integration.Type] = IntegrationStatusResponse{
+
+		resp := IntegrationStatusResponse{
 			Type:        string(integration.Type),
 			Enabled:     integration.Enabled,
 			Configured:  len(integration.Config) > 0,
 			LastUpdated: formatTime(integration.UpdatedAt),
 		}
+
+		// Popular campos de configuração específicos
+		switch integration.Type {
+		case entity.IntegrationTypeWordPress:
+			if wpConfig, err := integration.GetWordPressConfig(); err == nil {
+				resp.SiteURL = &wpConfig.SiteURL
+				resp.Username = &wpConfig.Username
+				resp.AppPassword = &wpConfig.AppPassword
+			}
+		case entity.IntegrationTypeSearchConsole:
+			if scConfig, err := integration.GetSearchConsoleConfig(); err == nil {
+				resp.PropertyURL = &scConfig.PropertyURL
+			}
+		case entity.IntegrationTypeAnalytics:
+			if gaConfig, err := integration.GetAnalyticsConfig(); err == nil {
+				resp.MeasurementID = &gaConfig.MeasurementID
+			}
+		}
+
+		typeMap[integration.Type] = resp
 	}
 
 	orderedTypes := []entity.IntegrationType{

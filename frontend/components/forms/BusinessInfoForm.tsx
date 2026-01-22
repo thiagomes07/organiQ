@@ -58,7 +58,7 @@ export function BusinessInfoForm({
       blogUrls: [],
       articleCount: isLimitReached ? 0 : 1, // Start with 1 valid if possible
       location: {
-        country: "",
+        country: "Brasil",
         state: "",
         city: "",
         hasMultipleUnits: false,
@@ -84,6 +84,16 @@ export function BusinessInfoForm({
     if (file) {
       setSelectedFile(file);
       setValue("brandFile", file);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setValue("brandFile", undefined);
+    // Reset the file input
+    const fileInput = document.getElementById("brandFile") as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = "";
     }
   };
 
@@ -305,13 +315,17 @@ export function BusinessInfoForm({
       {/* Upload Manual da Marca */}
       <div className="space-y-2">
         <Label htmlFor="brandFile">Manual da marca (opcional)</Label>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 flex-wrap">
           <label
             htmlFor="brandFile"
-            className="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--color-border)] hover:border-[var(--color-primary-purple)] transition-colors cursor-pointer"
+            className={`flex items-center gap-2 px-4 py-2 rounded-[var(--radius-sm)] border-2 border-dashed transition-colors cursor-pointer ${
+              selectedFile
+                ? "border-[var(--color-success)] bg-[var(--color-success)]/5"
+                : "border-[var(--color-border)] hover:border-[var(--color-primary-purple)]"
+            }`}
           >
-            <Upload className="h-4 w-4" />
-            <span className="text-sm font-onest">
+            <Upload className={`h-4 w-4 ${selectedFile ? "text-[var(--color-success)]" : ""}`} />
+            <span className={`text-sm font-onest ${selectedFile ? "text-[var(--color-success)] font-medium" : ""}`}>
               {selectedFile ? selectedFile.name : "Escolher arquivo"}
             </span>
           </label>
@@ -322,6 +336,18 @@ export function BusinessInfoForm({
             className="hidden"
             onChange={handleFileChange}
           />
+          {selectedFile && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={handleRemoveFile}
+              className="text-[var(--color-error)] hover:text-[var(--color-error)] hover:bg-[var(--color-error)]/10"
+              title="Remover arquivo"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
         <p className="text-xs text-[var(--color-primary-dark)]/60 font-onest">
           PDF, JPG ou PNG (máx. 5MB)

@@ -33,14 +33,6 @@ export function ArticleIdeaCard({ idea, onUpdate }: ArticleIdeaCardProps) {
     setIsApproved(idea.approved);
   }, [idea.approved]);
 
-  // Sincronizar localFeedback quando idea.feedback mudar externamente
-  useEffect(() => {
-    if (idea.feedback !== localFeedback && idea.feedback !== lastSavedRef.current) {
-      setLocalFeedback(idea.feedback || "");
-      lastSavedRef.current = idea.feedback || "";
-    }
-  }, [idea.feedback, localFeedback]);
-
   // Validação de feedback (useMemo para memoizar a função)
   const validateFeedback = useCallback((value: string): boolean => {
     const trimmed = value.trim();

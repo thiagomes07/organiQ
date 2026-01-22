@@ -186,8 +186,9 @@ export function NewArticlesWizard() {
   // ============================================
 
   const renderStepApproval = () => {
+    // Contar apenas feedbacks de matérias APROVADAS
     const feedbackCount = articleIdeas.filter(
-      (idea) => idea.feedback && idea.feedback.length > 0
+      (idea) => idea.approved && idea.feedback && idea.feedback.length > 0
     ).length;
 
     const handlePublish = () => {

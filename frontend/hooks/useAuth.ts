@@ -119,6 +119,30 @@ export function useAuth() {
   }
 
   // ============================================
+  // REFRESH AUTH MUTATION
+  // ============================================
+
+  const refreshAuthMutation = useMutation({
+    mutationFn: async () => {
+      // Call refresh endpoint to get new token
+      await authApi.refreshToken()
+      // Then get updated user data
+      return authApi.getCurrentUser()
+    },
+    onSuccess: (data) => {
+      setUser(data.user)
+    },
+    onError: (error) => {
+      const message = getErrorMessage(error)
+      console.error('Error refreshing auth:', message)
+    }
+  })
+
+  const refreshAuth = async () => {
+    return refreshAuthMutation.mutateAsync()
+  }
+
+  // ============================================
   // RETURN
   // ============================================
 
@@ -132,11 +156,13 @@ export function useAuth() {
     login,
     register,
     logout,
+    refreshAuth,
 
     // Mutation states
     isLoggingIn: loginMutation.isPending,
     isRegistering: registerMutation.isPending,
     isLoggingOut: logoutMutation.isPending,
+    isRefreshing: refreshAuthMutation.isPending,
 
     // Helpers
     hasCompletedOnboarding: user?.hasCompletedOnboarding ?? false,

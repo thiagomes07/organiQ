@@ -6,7 +6,7 @@ import { z } from "zod";
 
 const passwordValidation = z
   .string()
-  .min(6, "Senha deve ter no mínimo 6 caracteres")
+  .min(8, "Senha deve ter no mínimo 8 caracteres")
   .max(100, "Senha muito longa")
   ;
 
@@ -331,7 +331,7 @@ export const passwordUpdateSchema = z
     currentPassword: z.string().min(1, "A senha atual é obrigatória"),
     newPassword: z
       .string()
-      .min(6, "A nova senha deve ter no mínimo 6 caracteres")
+      .min(8, "A nova senha deve ter no mínimo 8 caracteres")
       .max(100, "Senha muito longa"),
     confirmPassword: z.string().min(1, "Confirme a nova senha"),
   })

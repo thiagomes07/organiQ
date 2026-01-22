@@ -143,12 +143,18 @@ export default function ConfiguracoesPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await api.get<WizardData>("/wizard/data");
-                setWizardData(response.data);
+                // Fetch Wizard Data (Business & Competitors)
+                const wizardResponse = await api.get<WizardData>("/wizard/data");
+                setWizardData(wizardResponse.data);
+
+                // Fetch Account Data (Integrations)
+                // Note: The backend now returns sensitive fields (SiteURL, Username, AppPassword etc) in /account
+                const accountResponse = await api.get<any>("/account");
+                const integrations = accountResponse.data.integrations;
 
                 // Populate business form
-                if (response.data.business) {
-                    const biz = response.data.business;
+                if (wizardResponse.data.business) {
+                    const biz = wizardResponse.data.business;
                     businessForm.reset({
                         description: biz.description || "",
                         primaryObjective: biz.primaryObjective as "leads" | "sales" | "branding",
@@ -181,13 +187,37 @@ export default function ConfiguracoesPage() {
                 }
 
                 // Populate competitors form
-                if (response.data.competitors && response.data.competitors.length > 0) {
+                if (wizardResponse.data.competitors && wizardResponse.data.competitors.length > 0) {
                     competitorsForm.reset({
-                        competitorUrls: response.data.competitors,
+                        competitorUrls: wizardResponse.data.competitors,
                     });
                 }
+
+                // Populate integrations form
+                if (integrations && Array.isArray(integrations)) {
+                    const wp = integrations.find((i: any) => i.type === "wordpress");
+                    const sc = integrations.find((i: any) => i.type === "search_console");
+                    const ga = integrations.find((i: any) => i.type === "analytics");
+
+                    integrationsForm.reset({
+                        wordpress: {
+                            siteUrl: wp?.siteUrl || "",
+                            username: wp?.username || "",
+                            appPassword: wp?.appPassword || "",
+                        },
+                        searchConsole: {
+                            enabled: sc?.enabled || false,
+                            propertyUrl: sc?.propertyUrl || "",
+                        },
+                        analytics: {
+                            enabled: ga?.enabled || false,
+                            measurementId: ga?.measurementId || "",
+                        },
+                    });
+                }
+
             } catch (error) {
-                console.error("Error fetching wizard data:", error);
+                console.error("Error fetching data:", error);
                 toast.error("Erro ao carregar configurações");
             } finally {
                 setIsLoading(false);
@@ -905,25 +935,23 @@ export default function ConfiguracoesPage() {
                                         </div>
                                     </Accordion.Item>
 
-                                    {/* Google Search Console */}
-                                    <Accordion.Item value="searchConsole">
+                                    {/* Google Search Console - BREVE */}
+                                    <Accordion.Item value="searchConsole" className="cursor-not-allowed opacity-60 relative" title="Em breve será implementado">
                                         <div
                                             className={cn(
-                                                "border-2 rounded-[var(--radius-md)] overflow-hidden",
-                                                watchSearchConsoleEnabled
-                                                    ? "border-[var(--color-primary-teal)]"
-                                                    : "border-[var(--color-border)]"
+                                                "border-2 rounded-[var(--radius-md)] overflow-hidden border-[var(--color-border)] pointer-events-none select-none bg-gray-50"
                                             )}
                                         >
                                             <Accordion.Header>
-                                                <Accordion.Trigger className="flex items-center justify-between w-full p-4 hover:bg-[var(--color-primary-teal)]/5">
+                                                <div className="flex items-center justify-between w-full p-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="h-10 w-10 rounded-full bg-[var(--color-primary-teal)]/10 flex items-center justify-center">
+                                                        <div className="h-10 w-10 rounded-full bg-[var(--color-primary-teal)]/10 flex items-center justify-center grayscale">
                                                             <span className="text-xl">📊</span>
                                                         </div>
                                                         <div className="text-left">
-                                                            <h4 className="text-base font-semibold font-all-round text-[var(--color-primary-dark)]">
+                                                            <h4 className="text-base font-semibold font-all-round text-[var(--color-primary-dark)] flex items-center gap-2">
                                                                 Google Search Console
+                                                                <span className="px-2 py-0.5 rounded-full bg-gray-200 text-[10px] text-gray-500 font-bold uppercase tracking-wider">Breve</span>
                                                             </h4>
                                                             <p className="text-xs font-onest text-[var(--color-primary-dark)]/60">
                                                                 Análise de palavras-chave
@@ -931,50 +959,30 @@ export default function ConfiguracoesPage() {
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        {watchSearchConsoleEnabled && (
-                                                            <Check className="h-5 w-5 text-[var(--color-success)]" />
-                                                        )}
-                                                        <input
-                                                            type="checkbox"
-                                                            {...integrationsForm.register("searchConsole.enabled")}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="h-4 w-4 rounded"
-                                                        />
+                                                        <div className="h-4 w-4 rounded border border-gray-300 bg-gray-100"></div>
                                                     </div>
-                                                </Accordion.Trigger>
+                                                </div>
                                             </Accordion.Header>
-
-                                            {watchSearchConsoleEnabled && (
-                                                <Accordion.Content className="p-4 pt-0">
-                                                    <Input
-                                                        type="url"
-                                                        placeholder="https://seusite.com.br"
-                                                        {...integrationsForm.register("searchConsole.propertyUrl")}
-                                                    />
-                                                </Accordion.Content>
-                                            )}
                                         </div>
                                     </Accordion.Item>
 
-                                    {/* Google Analytics */}
-                                    <Accordion.Item value="analytics">
+                                    {/* Google Analytics - BREVE */}
+                                    <Accordion.Item value="analytics" className="cursor-not-allowed opacity-60 relative" title="Em breve será implementado">
                                         <div
                                             className={cn(
-                                                "border-2 rounded-[var(--radius-md)] overflow-hidden",
-                                                watchAnalyticsEnabled
-                                                    ? "border-[var(--color-primary-teal)]"
-                                                    : "border-[var(--color-border)]"
+                                                "border-2 rounded-[var(--radius-md)] overflow-hidden border-[var(--color-border)] pointer-events-none select-none bg-gray-50"
                                             )}
                                         >
                                             <Accordion.Header>
-                                                <Accordion.Trigger className="flex items-center justify-between w-full p-4 hover:bg-[var(--color-primary-teal)]/5">
+                                                <div className="flex items-center justify-between w-full p-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="h-10 w-10 rounded-full bg-[var(--color-primary-teal)]/10 flex items-center justify-center">
+                                                        <div className="h-10 w-10 rounded-full bg-[var(--color-primary-teal)]/10 flex items-center justify-center grayscale">
                                                             <span className="text-xl">📈</span>
                                                         </div>
                                                         <div className="text-left">
-                                                            <h4 className="text-base font-semibold font-all-round text-[var(--color-primary-dark)]">
+                                                            <h4 className="text-base font-semibold font-all-round text-[var(--color-primary-dark)] flex items-center gap-2">
                                                                 Google Analytics
+                                                                <span className="px-2 py-0.5 rounded-full bg-gray-200 text-[10px] text-gray-500 font-bold uppercase tracking-wider">Breve</span>
                                                             </h4>
                                                             <p className="text-xs font-onest text-[var(--color-primary-dark)]/60">
                                                                 Análise de tráfego
@@ -982,28 +990,10 @@ export default function ConfiguracoesPage() {
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        {watchAnalyticsEnabled && (
-                                                            <Check className="h-5 w-5 text-[var(--color-success)]" />
-                                                        )}
-                                                        <input
-                                                            type="checkbox"
-                                                            {...integrationsForm.register("analytics.enabled")}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="h-4 w-4 rounded"
-                                                        />
+                                                        <div className="h-4 w-4 rounded border border-gray-300 bg-gray-100"></div>
                                                     </div>
-                                                </Accordion.Trigger>
+                                                </div>
                                             </Accordion.Header>
-
-                                            {watchAnalyticsEnabled && (
-                                                <Accordion.Content className="p-4 pt-0">
-                                                    <Input
-                                                        type="text"
-                                                        placeholder="G-XXXXXXXXXX"
-                                                        {...integrationsForm.register("analytics.measurementId")}
-                                                    />
-                                                </Accordion.Content>
-                                            )}
                                         </div>
                                     </Accordion.Item>
                                 </Accordion.Root>

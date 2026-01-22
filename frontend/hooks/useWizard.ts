@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import api, { getErrorMessage } from "@/lib/axios";
 import { useAuthStore } from "@/store/authStore";
+import { useAuth } from "@/hooks/useAuth";
 import type { ArticleIdea, PublishPayload } from "@/types";
 import type { BusinessInput, CompetitorsInput, IntegrationsInput } from "@/lib/validations";
 
@@ -133,9 +134,11 @@ export function useWizard(isOnboarding: boolean = true) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { updateUser } = useAuthStore();
+  const { refreshAuth } = useAuth();
 
   const ideasStartedAtRef = useRef<number | null>(null);
   const publishStartedAtRef = useRef<number | null>(null);
+  const onboardingCompletedRef = useRef<boolean>(false);
   const IDEAS_TIMEOUT_MS = 5 * 60 * 1000;
   const PUBLISH_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -216,10 +219,32 @@ export function useWizard(isOnboarding: boolean = true) {
       }
 
       // Preencher dados de integrations
-      if (data.hasIntegration) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const responseData = data as any;
+      if (responseData.integrationData) {
+        console.log('[useWizard] Preenchendo integrationData:', responseData.integrationData);
         setIntegrationsData({
-          wordpress: { siteUrl: '', username: '', appPassword: '' },
+          wordpress: {
+            siteUrl: responseData.integrationData.wordpress?.siteUrl || '',
+            username: responseData.integrationData.wordpress?.username || '',
+            appPassword: responseData.integrationData.wordpress?.appPassword || '',
+          },
+          searchConsole: {
+            enabled: !!responseData.integrationData.searchConsole?.propertyUrl,
+            propertyUrl: responseData.integrationData.searchConsole?.propertyUrl || '',
+          },
+          analytics: {
+            enabled: !!responseData.integrationData.analytics?.measurementId,
+            measurementId: responseData.integrationData.analytics?.measurementId || '',
+          }
         });
+      } else if (data.hasIntegration) {
+         // Fallback antigo (apenas se nao tiver integrationData mas tiver hasIntegration)
+         setIntegrationsData({
+           wordpress: { siteUrl: '', username: '', appPassword: '' },
+           searchConsole: { enabled: false },
+           analytics: { enabled: false }
+         });
       }
 
       // Preencher ideias de artigos pendentes
@@ -236,19 +261,17 @@ export function useWizard(isOnboarding: boolean = true) {
       // Preencher estados de regeneração (se disponíveis no tipo retornado pela API, que atualizamos no backend)
       // Ajuste de tipagem necessário aqui pois o tipo retornado pela API no hook pode não estar atualizado
       // Vamos assumir que os dados vêm no objeto data, casting if needed
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const extendedData = data as any;
-      if (typeof extendedData.hasGeneratedIdeas === 'boolean') {
-        setHasGeneratedIdeas(extendedData.hasGeneratedIdeas);
+      if (typeof responseData.hasGeneratedIdeas === 'boolean') {
+        setHasGeneratedIdeas(responseData.hasGeneratedIdeas);
       }
-      if (typeof extendedData.regenerationsRemaining === 'number') {
-        setRegenerationsRemaining(extendedData.regenerationsRemaining);
+      if (typeof responseData.regenerationsRemaining === 'number') {
+        setRegenerationsRemaining(responseData.regenerationsRemaining);
       }
-      if (typeof extendedData.regenerationsLimit === 'number') {
-        setRegenerationsLimit(extendedData.regenerationsLimit);
+      if (typeof responseData.regenerationsLimit === 'number') {
+        setRegenerationsLimit(responseData.regenerationsLimit);
       }
-      if (extendedData.nextRegenerationAt) {
-        setNextRegenerationAt(extendedData.nextRegenerationAt);
+      if (responseData.nextRegenerationAt) {
+        setNextRegenerationAt(responseData.nextRegenerationAt);
       }
 
 
@@ -411,20 +434,11 @@ export function useWizard(isOnboarding: boolean = true) {
     const { status, ideas, error } = ideasStatusQuery.data;
 
     if (status === "completed") {
-      // Sempre atualizar as ideias com as novas geradas, mantendo as aprovadas anteriores
       console.log('[useWizard] Ideas generation completed, updating ideas');
 
-      setArticleIdeas((prev) => {
-        // Manter apenas as aprovadas da lista anterior (pois o backend deleta as não aprovadas ao regenerar)
-        const previouslyApproved = prev.filter(idea => idea.approved);
-        // Combinar com as novas ideias
-        // Filtrar novas ideias para garantir que não haja duplicatas (embora improvável com UUIDs novos)
-        const newIdeas = ideas || [];
-        const existingIds = new Set(previouslyApproved.map(i => i.id));
-        const uniqueNewIdeas = newIdeas.filter(i => !existingIds.has(i.id));
-
-        return [...previouslyApproved, ...uniqueNewIdeas];
-      });
+      // O backend já retorna TODAS as ideias (aprovadas + novas)
+      // Não precisamos mesclar, apenas substituir
+      setArticleIdeas(ideas || []);
 
       setHasGeneratedIdeas(true); // Marcar que temos ideias geradas
       setCurrentStep(isOnboarding ? 4 : 3);
@@ -495,8 +509,14 @@ export function useWizard(isOnboarding: boolean = true) {
     const { status, published, errorMessage } = publishStatusQuery.data;
 
     if (status === "completed") {
-      if (isOnboarding) {
+      // Only process onboarding completion once
+      if (isOnboarding && !onboardingCompletedRef.current) {
+        onboardingCompletedRef.current = true;
         updateUser({ hasCompletedOnboarding: true });
+        // Refresh auth to get new JWT with updated onboardingStep
+        refreshAuth().catch((err) => {
+          console.error('Failed to refresh auth after onboarding:', err);
+        });
       }
       queryClient.invalidateQueries({ queryKey: ["articles"] });
       toast.success(`${published} matérias publicadas com sucesso!`);
@@ -505,7 +525,8 @@ export function useWizard(isOnboarding: boolean = true) {
       toast.error(errorMessage || "Erro ao publicar matérias");
       setCurrentStep(isOnboarding ? 4 : 3);
     }
-  }, [currentStep, publishStatusQuery.data, isOnboarding, updateUser, queryClient, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, publishStatusQuery.data, isOnboarding, queryClient, router]);
 
   // Monitorar timeout da publicação
   useEffect(() => {

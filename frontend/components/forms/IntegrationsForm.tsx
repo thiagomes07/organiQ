@@ -159,9 +159,10 @@ export function IntegrationsForm({
                 <div className="relative">
                   <Input
                     id="wp-appPassword"
-                    type={showPassword ? "text" : "password"}
+                    type="text"
+                    className={!showPassword ? "text-security-disc" : ""}
                     placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
-                    autoComplete="new-password"
+                    autoComplete="off"
                     error={errors.wordpress?.appPassword?.message}
                     {...register('wordpress.appPassword')}
                   />
@@ -182,23 +183,21 @@ export function IntegrationsForm({
           </div>
         </Accordion.Item>
 
-        {/* Google Search Console (Opcional) */}
-        <Accordion.Item value="searchConsole">
+        {/* Google Search Console (Opcional) - BREVE */}
+        <Accordion.Item value="searchConsole" className="cursor-not-allowed opacity-60 relative" title="Em breve será implementado">
           <div className={cn(
-            "border-2 rounded-[var(--radius-md)] overflow-hidden transition-colors",
-            watchSearchConsoleEnabled
-              ? "border-[var(--color-primary-teal)]"
-              : "border-[var(--color-border)]"
+            "border-2 rounded-[var(--radius-md)] overflow-hidden transition-colors border-[var(--color-border)] pointer-events-none select-none bg-gray-50"
           )}>
             <Accordion.Header>
-              <Accordion.Trigger className="flex items-center justify-between w-full p-4 hover:bg-[var(--color-primary-teal)]/5 transition-colors">
+              <div className="flex items-center justify-between w-full p-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center h-10 w-10 rounded-full bg-[var(--color-primary-teal)]/10">
+                  <div className="flex items-center justify-center h-10 w-10 rounded-full bg-[var(--color-primary-teal)]/10 grayscale">
                     <span className="text-xl">📊</span>
                   </div>
                   <div className="text-left">
-                    <h4 className="text-base font-semibold font-all-round text-[var(--color-primary-dark)]">
-                      Google Search Console
+                    <h4 className="text-base font-semibold font-all-round text-[var(--color-primary-dark)] flex items-center gap-2">
+                       Google Search Console
+                       <span className="px-2 py-0.5 rounded-full bg-gray-200 text-[10px] text-gray-500 font-bold uppercase tracking-wider">Breve</span>
                     </h4>
                     <p className="text-xs font-onest text-[var(--color-primary-dark)]/60">
                       Análise de palavras-chave e rankings
@@ -206,59 +205,29 @@ export function IntegrationsForm({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {watchSearchConsoleEnabled && (
-                    <Check className="h-5 w-5 text-[var(--color-success)]" />
-                  )}
-                  <input
-                    type="checkbox"
-                    checked={watchSearchConsoleEnabled}
-                    onChange={(e) => setValue('searchConsole.enabled', e.target.checked)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary-teal)] focus:ring-[var(--color-primary-teal)]"
-                  />
+                   {/* Checkbox disabled visually */}
+                   <div className="h-4 w-4 rounded border border-gray-300 bg-gray-100"></div>
                 </div>
-              </Accordion.Trigger>
+              </div>
             </Accordion.Header>
-
-            {watchSearchConsoleEnabled && (
-              <Accordion.Content className="p-4 pt-0 space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="sc-propertyUrl" required>
-                    URL da propriedade
-                  </Label>
-                  <Input
-                    id="sc-propertyUrl"
-                    type="url"
-                    placeholder="https://seusite.com.br"
-                    error={errors.searchConsole?.propertyUrl?.message}
-                    {...register('searchConsole.propertyUrl')}
-                  />
-                  <p className="text-xs text-[var(--color-primary-dark)]/60 font-onest">
-                    Use a mesma URL cadastrada no Search Console
-                  </p>
-                </div>
-              </Accordion.Content>
-            )}
           </div>
         </Accordion.Item>
 
-        {/* Google Analytics (Opcional) */}
-        <Accordion.Item value="analytics">
+        {/* Google Analytics (Opcional) - BREVE */}
+        <Accordion.Item value="analytics" className="cursor-not-allowed opacity-60 relative" title="Em breve será implementado">
           <div className={cn(
-            "border-2 rounded-[var(--radius-md)] overflow-hidden transition-colors",
-            watchAnalyticsEnabled
-              ? "border-[var(--color-primary-teal)]"
-              : "border-[var(--color-border)]"
+            "border-2 rounded-[var(--radius-md)] overflow-hidden transition-colors border-[var(--color-border)] pointer-events-none select-none bg-gray-50"
           )}>
             <Accordion.Header>
-              <Accordion.Trigger className="flex items-center justify-between w-full p-4 hover:bg-[var(--color-primary-teal)]/5 transition-colors">
+              <div className="flex items-center justify-between w-full p-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center h-10 w-10 rounded-full bg-[var(--color-primary-teal)]/10">
+                  <div className="flex items-center justify-center h-10 w-10 rounded-full bg-[var(--color-primary-teal)]/10 grayscale">
                     <span className="text-xl">📈</span>
                   </div>
                   <div className="text-left">
-                    <h4 className="text-base font-semibold font-all-round text-[var(--color-primary-dark)]">
+                    <h4 className="text-base font-semibold font-all-round text-[var(--color-primary-dark)] flex items-center gap-2">
                       Google Analytics
+                      <span className="px-2 py-0.5 rounded-full bg-gray-200 text-[10px] text-gray-500 font-bold uppercase tracking-wider">Breve</span>
                     </h4>
                     <p className="text-xs font-onest text-[var(--color-primary-dark)]/60">
                       Análise de tráfego e conversões
@@ -266,39 +235,11 @@ export function IntegrationsForm({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {watchAnalyticsEnabled && (
-                    <Check className="h-5 w-5 text-[var(--color-success)]" />
-                  )}
-                  <input
-                    type="checkbox"
-                    checked={watchAnalyticsEnabled}
-                    onChange={(e) => setValue('analytics.enabled', e.target.checked)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary-teal)] focus:ring-[var(--color-primary-teal)]"
-                  />
+                   {/* Checkbox disabled visually */}
+                   <div className="h-4 w-4 rounded border border-gray-300 bg-gray-100"></div>
                 </div>
-              </Accordion.Trigger>
+              </div>
             </Accordion.Header>
-
-            {watchAnalyticsEnabled && (
-              <Accordion.Content className="p-4 pt-0 space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="ga-measurementId" required>
-                    ID de Medição GA4
-                  </Label>
-                  <Input
-                    id="ga-measurementId"
-                    type="text"
-                    placeholder="G-XXXXXXXXXX"
-                    error={errors.analytics?.measurementId?.message}
-                    {...register('analytics.measurementId')}
-                  />
-                  <p className="text-xs text-[var(--color-primary-dark)]/60 font-onest">
-                    Formato: G-XXXXXXXXXX (encontrado em Admin → Fluxos de dados)
-                  </p>
-                </div>
-              </Accordion.Content>
-            )}
           </div>
         </Accordion.Item>
       </Accordion.Root>
