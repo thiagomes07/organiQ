@@ -467,7 +467,7 @@ export function useWizard(isOnboarding: boolean = true) {
   }, [currentStep, isOnboarding, IDEAS_TIMEOUT_MS, hasGeneratedIdeas]);
 
   // ============================================
-  // STEP 4: PUBLISH
+  // STEP 4: PUBLISH (Now actually GENERATE CONTENT)
   // ============================================
 
   const publishMutation = useMutation({
@@ -475,31 +475,37 @@ export function useWizard(isOnboarding: boolean = true) {
       ? wizardApi.publishArticles
       : wizardApi.publishNewArticles,
     onSuccess: (data) => {
-      publishStartedAtRef.current = Date.now();
-      setJobId(data.jobId);
-      setCurrentStep(1000); // Loading de publicação
+      // publishStartedAtRef.current = Date.now();
+      // setJobId(data.jobId);
+      // setCurrentStep(1000); // Loading de publicação
+
+      // REDIRECT IMMEDIATELY to articles page
+      if (isOnboarding && !onboardingCompletedRef.current) {
+        onboardingCompletedRef.current = true;
+        updateUser({ hasCompletedOnboarding: true });
+        // Refresh auth to get new JWT with updated onboardingStep
+        refreshAuth().catch((err) => {
+          console.error('Failed to refresh auth after onboarding:', err);
+        });
+      }
+      toast.success("Geração de matérias iniciada! Acompanhe o status aqui.");
+      router.push("/app/materias");
     },
     onError: (error) => {
       const message = getErrorMessage(error);
-      toast.error(message || "Erro ao publicar matérias");
+      toast.error(message || "Erro ao iniciar geração de matérias");
     },
   });
 
   // ============================================
-  // POLLING: PUBLISH STATUS
+  // POLLING: PUBLISH STATUS (REMOVED/DISABLED)
   // ============================================
 
   const publishStatusQuery = useQuery({
     queryKey: ["publish-status", jobId],
     queryFn: () => wizardApi.getPublishStatus(jobId!),
-    enabled: !!jobId && currentStep === 1000,
+    enabled: false, // Disabled polling
     refetchOnWindowFocus: false,
-    refetchInterval: (query) => {
-      if (query.state.data?.status === "completed" || query.state.data?.status === "failed") {
-        return false;
-      }
-      return 3000;
-    },
   });
 
   // Monitorar status da publicação

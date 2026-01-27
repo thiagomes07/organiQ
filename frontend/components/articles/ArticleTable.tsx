@@ -10,10 +10,17 @@ interface ArticleTableProps {
   articles: Article[]
   onViewError?: (article: Article) => void
   onRepublish?: (id: string) => void
+  onPreview?: (article: Article) => void
   isRepublishing?: boolean
 }
 
 const statusConfig = {
+  generated: {
+    color: 'bg-[var(--color-primary-purple)]/10',
+    textColor: 'text-[var(--color-primary-purple)]',
+    label: 'Gerado',
+    icon: ExternalLink, // Or eye icon
+  },
   generating: {
     color: 'bg-[var(--color-warning)]/10',
     textColor: 'text-[var(--color-warning)]',
@@ -44,6 +51,7 @@ export function ArticleTable({
   articles,
   onViewError,
   onRepublish,
+  onPreview,
   isRepublishing,
 }: ArticleTableProps) {
   return (
@@ -116,17 +124,15 @@ export function ArticleTable({
                 {/* Ações */}
                 <td className="py-4 px-4">
                   <div className="flex items-center justify-end gap-2">
-                    {article.status === 'published' && article.postUrl && (
-                      <a
-                        href={article.postUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Button variant="outline" size="sm">
+                    {article.status === 'published' && (
+                        <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => onPreview?.(article)}
+                        >
                           <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                          Ver Post
+                          Visualizar
                         </Button>
-                      </a>
                     )}
 
                     {article.status === 'error' && (
@@ -151,6 +157,18 @@ export function ArticleTable({
                           </Button>
                         )}
                       </>
+                    )}
+
+                    {article.status === 'generated' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => onPreview?.(article)}
+                          className="bg-[var(--color-primary-purple)] hover:bg-[var(--color-primary-purple)]/90 text-white"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                          Revisar
+                        </Button>
                     )}
 
                     {(article.status === 'generating' || article.status === 'publishing') && (

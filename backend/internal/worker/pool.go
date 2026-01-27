@@ -17,11 +17,11 @@ import (
 // WorkerPool gerencia múltiplos workers consumindo das filas
 type WorkerPool struct {
 	generatorWorkers []*ArticleGeneratorWorker
-	publisherWorkers []*ArticlePublisherWorker
-	workerCount      int
-	mu               sync.RWMutex
-	wg               sync.WaitGroup
-	shutdownChan     chan struct{}
+	contentGeneratorWorkers []*ArticleContentGeneratorWorker
+	workerCount             int
+	mu                      sync.RWMutex
+	wg                      sync.WaitGroup
+	shutdownChan            chan struct{}
 }
 
 // NewWorkerPool cria nova instância do pool de workers
@@ -39,7 +39,7 @@ func NewWorkerPool(
 	maxRetries int,
 ) *WorkerPool {
 	generatorWorkers := make([]*ArticleGeneratorWorker, workerCount)
-	publisherWorkers := make([]*ArticlePublisherWorker, workerCount)
+	contentGeneratorWorkers := make([]*ArticleContentGeneratorWorker, workerCount)
 
 	for i := 0; i < workerCount; i++ {
 		generatorWorkers[i] = NewArticleGeneratorWorker(
@@ -52,11 +52,10 @@ func NewWorkerPool(
 			maxRetries,
 		)
 
-		publisherWorkers[i] = NewArticlePublisherWorker(
+		contentGeneratorWorkers[i] = NewArticleContentGeneratorWorker(
 			queueService,
 			articleRepo,
 			businessRepo,
-			integrationRepo,
 			agentClient,
 			cryptoService,
 			pollInterval,
@@ -65,10 +64,10 @@ func NewWorkerPool(
 	}
 
 	return &WorkerPool{
-		generatorWorkers: generatorWorkers,
-		publisherWorkers: publisherWorkers,
-		workerCount:      workerCount,
-		shutdownChan:     make(chan struct{}),
+		generatorWorkers:        generatorWorkers,
+		contentGeneratorWorkers: contentGeneratorWorkers,
+		workerCount:             workerCount,
+		shutdownChan:            make(chan struct{}),
 	}
 }
 
@@ -112,30 +111,30 @@ func (p *WorkerPool) Start(ctx context.Context) <-chan struct{} {
 		}(i, worker)
 	}
 
-	// Iniciar publisher workers em goroutines separadas
-	for i, worker := range p.publisherWorkers {
+	// Iniciar content generator workers em goroutines separadas
+	for i, worker := range p.contentGeneratorWorkers {
 		p.wg.Add(1)
 
-		go func(index int, w *ArticlePublisherWorker) {
+		go func(index int, w *ArticleContentGeneratorWorker) {
 			defer p.wg.Done()
 
 			log.Info().
 				Int("worker_index", index).
 				Str("worker_id", w.workerID).
-				Str("type", "publisher").
-				Msg("Publisher worker iniciado")
+				Str("type", "content_generator").
+				Msg("Content Generator worker iniciado")
 
 			if err := w.Start(ctx); err != nil && err != context.Canceled {
 				log.Error().
 					Err(err).
 					Int("worker_index", index).
 					Str("worker_id", w.workerID).
-					Msg("Publisher worker parou com erro")
+					Msg("Content Generator worker parou com erro")
 			} else {
 				log.Info().
 					Int("worker_index", index).
 					Str("worker_id", w.workerID).
-					Msg("Publisher worker parou gracefully")
+					Msg("Content Generator worker parou gracefully")
 			}
 		}(i, worker)
 	}

@@ -18,6 +18,7 @@ type ArticleHandler struct {
 	listArticlesUC     *article.ListArticlesUseCase
 	getArticleUC       *article.GetArticleUseCase
 	republishArticleUC *article.RepublishArticleUseCase
+	publishArticleUC   *article.PublishArticleUseCase
 }
 
 // NewArticleHandler cria nova instância
@@ -25,11 +26,13 @@ func NewArticleHandler(
 	listArticlesUC *article.ListArticlesUseCase,
 	getArticleUC *article.GetArticleUseCase,
 	republishArticleUC *article.RepublishArticleUseCase,
+	publishArticleUC *article.PublishArticleUseCase,
 ) *ArticleHandler {
 	return &ArticleHandler{
 		listArticlesUC:     listArticlesUC,
 		getArticleUC:       getArticleUC,
 		republishArticleUC: republishArticleUC,
+		publishArticleUC:   publishArticleUC,
 	}
 }
 
@@ -71,6 +74,8 @@ func (h *ArticleHandler) ListArticles(w http.ResponseWriter, r *http.Request) {
 	pageStr := r.URL.Query().Get("page")
 	limitStr := r.URL.Query().Get("limit")
 	statusFilter := r.URL.Query().Get("status")
+	sortBy := r.URL.Query().Get("sort_by")
+	order := r.URL.Query().Get("order")
 
 	page := 1
 	if pageStr != "" {
@@ -92,10 +97,12 @@ func (h *ArticleHandler) ListArticles(w http.ResponseWriter, r *http.Request) {
 
 	// 3. Executar use case
 	input := article.ListArticlesInput{
-		UserID: userID,
-		Page:   page,
-		Limit:  limit,
-		Status: statusFilter,
+		UserID:    userID,
+		Page:      page,
+		Limit:     limit,
+		Status:    statusFilter,
+		SortBy:    sortBy,
+		SortOrder: order,
 	}
 
 	output, err := h.listArticlesUC.Execute(r.Context(), input)
@@ -265,4 +272,69 @@ func (h *ArticleHandler) RepublishArticle(w http.ResponseWriter, r *http.Request
 	}
 
 	util.RespondJSON(w, http.StatusAccepted, response)
+}
+
+// ============================================
+// POST /api/articles/:id/publish
+// ============================================
+
+// PublishArticleResponse response da publicação manual
+type PublishArticleResponse struct {
+	ArticleID string `json:"articleId"`
+	Status    string `json:"status"`
+	PostURL   string `json:"postUrl"`
+}
+
+// PublishArticle implementa POST /api/articles/:id/publish
+func (h *ArticleHandler) PublishArticle(w http.ResponseWriter, r *http.Request) {
+	log.Debug().Msg("ArticleHandler PublishArticle iniciado")
+
+	// 1. Extrair user_id do context
+	userID := middleware.GetUserIDFromContext(r)
+	if userID == "" {
+		log.Warn().Msg("PublishArticle: usuário não autenticado")
+		util.RespondError(w, http.StatusUnauthorized, "unauthorized", "Usuário não autenticado")
+		return
+	}
+
+	// 2. Extrair article_id do path
+	articleID := chi.URLParam(r, "id")
+	if articleID == "" {
+		log.Warn().Msg("PublishArticle: article_id não fornecido")
+		util.RespondError(w, http.StatusBadRequest, "missing_param", "article_id é obrigatório")
+		return
+	}
+
+	// 3. Executar use case
+	input := article.PublishArticleInput{
+		UserID:    userID,
+		ArticleID: articleID,
+	}
+
+	output, err := h.publishArticleUC.Execute(r.Context(), input)
+	if err != nil {
+		log.Error().Err(err).Msg("PublishArticle: erro no use case")
+
+		if err.Error() == "article_not_found" {
+			util.RespondError(w, http.StatusNotFound, "not_found", "Artigo não encontrado")
+		} else if err.Error() == "access_denied" {
+			util.RespondError(w, http.StatusForbidden, "forbidden", "Acesso negado")
+		} else if err.Error() == "integração WordPress não configurada" {
+			util.RespondError(w, http.StatusPreconditionRequired, "integration_required", err.Error())
+		} else if err.Error() == "artigo não está pronto para publicação (status incorreto)" {
+			util.RespondError(w, http.StatusUnprocessableEntity, "invalid_status", err.Error())
+		} else {
+			util.RespondError(w, http.StatusInternalServerError, "server_error", "Erro ao publicar artigo")
+		}
+		return
+	}
+
+	// 4. Responder com 200 OK
+	response := PublishArticleResponse{
+		ArticleID: output.ArticleID,
+		Status:    output.Status,
+		PostURL:   output.PostURL,
+	}
+
+	util.RespondJSON(w, http.StatusOK, response)
 }

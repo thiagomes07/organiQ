@@ -11,10 +11,17 @@ interface ArticleCardProps {
   article: Article
   onViewError?: (article: Article) => void
   onRepublish?: (id: string) => void
+  onPreview?: (article: Article) => void
   isRepublishing?: boolean
 }
 
 const statusConfig = {
+  generated: {
+    color: 'bg-[var(--color-primary-purple)]',
+    textColor: 'text-[var(--color-primary-purple)]',
+    label: 'Gerado',
+    icon: ExternalLink,
+  },
   generating: {
     color: 'bg-[var(--color-warning)]',
     textColor: 'text-[var(--color-warning)]',
@@ -45,6 +52,7 @@ export function ArticleCard({
   article,
   onViewError,
   onRepublish,
+  onPreview,
   isRepublishing,
 }: ArticleCardProps) {
   const status = statusConfig[article.status]
@@ -81,18 +89,28 @@ export function ArticleCard({
       </CardContent>
 
       <CardFooter className="pt-3 border-t border-[var(--color-border)]">
-        {article.status === 'published' && article.postUrl && (
-          <a
-            href={article.postUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full"
-          >
-            <Button variant="outline" size="sm" className="w-full">
+        {article.status === 'published' && (
+            <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={() => onPreview?.(article)}
+            >
               <ExternalLink className="h-4 w-4 mr-2" />
-              Ver Publicação
+              Visualizar
             </Button>
-          </a>
+        )}
+
+        {article.status === 'generated' && (
+            <Button 
+                variant="primary" 
+                size="sm" 
+                className="w-full bg-[var(--color-primary-purple)] hover:bg-[var(--color-primary-purple)]/90"
+                onClick={() => onPreview?.(article)}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Revisar e Publicar
+            </Button>
         )}
 
         {article.status === 'error' && (

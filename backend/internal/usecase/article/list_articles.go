@@ -14,10 +14,12 @@ import (
 
 // ListArticlesInput dados de entrada
 type ListArticlesInput struct {
-	UserID string // UUID como string do context
-	Page   int    // Página (mínimo 1)
-	Limit  int    // Itens por página (mínimo 1, máximo 100)
-	Status string // "all", "generating", "publishing", "published", "error"
+	UserID    string // UUID como string do context
+	Page      int    // Página (mínimo 1)
+	Limit     int    // Itens por página (mínimo 1, máximo 100)
+	Status    string // "all", "generating", "publishing", "published", "error"
+	SortBy    string // "title", "created_at", "status"
+	SortOrder string // "asc", "desc"
 }
 
 // ListArticlesOutput dados de saída
@@ -60,6 +62,8 @@ func (uc *ListArticlesUseCase) Execute(ctx context.Context, input ListArticlesIn
 		Int("page", input.Page).
 		Int("limit", input.Limit).
 		Str("status", input.Status).
+		Str("sort_by", input.SortBy).
+		Str("sort_order", input.SortOrder).
 		Msg("ListArticlesUseCase Execute iniciado")
 
 	// 1. Parse user_id
@@ -85,6 +89,16 @@ func (uc *ListArticlesUseCase) Execute(ctx context.Context, input ListArticlesIn
 
 	offset := (page - 1) * limit
 
+	// Default Sort
+	sortBy := input.SortBy
+	if sortBy == "" {
+		sortBy = "created_at"
+	}
+	sortOrder := input.SortOrder
+	if sortOrder == "" {
+		sortOrder = "desc"
+	}
+
 	// 3. Buscar artigos baseado no filtro de status
 	var articles []*entity.Article
 	var total int
@@ -96,7 +110,7 @@ func (uc *ListArticlesUseCase) Execute(ctx context.Context, input ListArticlesIn
 
 	switch statusFilter {
 	case "all":
-		articles, err = uc.articleRepo.FindByUserID(ctx, userID, limit, offset)
+		articles, err = uc.articleRepo.FindByUserID(ctx, userID, limit, offset, sortBy, sortOrder)
 		if err != nil {
 			log.Error().Err(err).Msg("ListArticlesUseCase: erro ao buscar artigos")
 			return nil, errors.New("erro ao buscar artigos")
@@ -109,7 +123,7 @@ func (uc *ListArticlesUseCase) Execute(ctx context.Context, input ListArticlesIn
 		}
 
 	case "generating":
-		articles, err = uc.articleRepo.FindByUserIDAndStatus(ctx, userID, entity.ArticleStatusGenerating, limit, offset)
+		articles, err = uc.articleRepo.FindByUserIDAndStatus(ctx, userID, entity.ArticleStatusGenerating, limit, offset, sortBy, sortOrder)
 		if err != nil {
 			log.Error().Err(err).Msg("ListArticlesUseCase: erro ao buscar artigos generating")
 			return nil, errors.New("erro ao buscar artigos")
@@ -122,7 +136,7 @@ func (uc *ListArticlesUseCase) Execute(ctx context.Context, input ListArticlesIn
 		}
 
 	case "publishing":
-		articles, err = uc.articleRepo.FindByUserIDAndStatus(ctx, userID, entity.ArticleStatusPublishing, limit, offset)
+		articles, err = uc.articleRepo.FindByUserIDAndStatus(ctx, userID, entity.ArticleStatusPublishing, limit, offset, sortBy, sortOrder)
 		if err != nil {
 			log.Error().Err(err).Msg("ListArticlesUseCase: erro ao buscar artigos publishing")
 			return nil, errors.New("erro ao buscar artigos")
@@ -135,7 +149,7 @@ func (uc *ListArticlesUseCase) Execute(ctx context.Context, input ListArticlesIn
 		}
 
 	case "published":
-		articles, err = uc.articleRepo.FindPublishedByUserID(ctx, userID, limit, offset)
+		articles, err = uc.articleRepo.FindPublishedByUserID(ctx, userID, limit, offset, sortBy, sortOrder)
 		if err != nil {
 			log.Error().Err(err).Msg("ListArticlesUseCase: erro ao buscar artigos published")
 			return nil, errors.New("erro ao buscar artigos")
@@ -148,7 +162,7 @@ func (uc *ListArticlesUseCase) Execute(ctx context.Context, input ListArticlesIn
 		}
 
 	case "error":
-		articles, err = uc.articleRepo.FindErrorsByUserID(ctx, userID, limit, offset)
+		articles, err = uc.articleRepo.FindErrorsByUserID(ctx, userID, limit, offset, sortBy, sortOrder)
 		if err != nil {
 			log.Error().Err(err).Msg("ListArticlesUseCase: erro ao buscar artigos error")
 			return nil, errors.New("erro ao buscar artigos")

@@ -4,8 +4,9 @@ package repository
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"organiq/internal/domain/entity"
+
+	"github.com/google/uuid"
 )
 
 // ============================================
@@ -119,19 +120,19 @@ type ArticleRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.Article, error)
 
 	// FindByUserID retorna artigos de um usuário com paginação
-	FindByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*entity.Article, error)
+	FindByUserID(ctx context.Context, userID uuid.UUID, limit, offset int, sortBy, order string) ([]*entity.Article, error)
 
 	// FindByUserIDAndStatus retorna artigos de um usuário com status específico
-	FindByUserIDAndStatus(ctx context.Context, userID uuid.UUID, status entity.ArticleStatus, limit, offset int) ([]*entity.Article, error)
+	FindByUserIDAndStatus(ctx context.Context, userID uuid.UUID, status entity.ArticleStatus, limit, offset int, sortBy, order string) ([]*entity.Article, error)
 
 	// FindByIdeaID busca artigo associado a uma ideia
 	FindByIdeaID(ctx context.Context, ideaID uuid.UUID) (*entity.Article, error)
 
 	// FindPublishedByUserID retorna artigos publicados de um usuário
-	FindPublishedByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*entity.Article, error)
+	FindPublishedByUserID(ctx context.Context, userID uuid.UUID, limit, offset int, sortBy, order string) ([]*entity.Article, error)
 
 	// FindErrorsByUserID retorna artigos com erro de um usuário
-	FindErrorsByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*entity.Article, error)
+	FindErrorsByUserID(ctx context.Context, userID uuid.UUID, limit, offset int, sortBy, order string) ([]*entity.Article, error)
 
 	// FindByStatus retorna artigos com status específico
 	FindByStatus(ctx context.Context, status entity.ArticleStatus) ([]*entity.Article, error)

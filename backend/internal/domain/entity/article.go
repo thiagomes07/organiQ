@@ -258,6 +258,7 @@ type ArticleStatus string
 
 const (
 	ArticleStatusGenerating  ArticleStatus = "generating"
+	ArticleStatusGenerated   ArticleStatus = "generated"
 	ArticleStatusPublishing  ArticleStatus = "publishing"
 	ArticleStatusPublished   ArticleStatus = "published"
 	ArticleStatusError       ArticleStatus = "error"
@@ -266,6 +267,7 @@ const (
 // IsValid verifica se o status é válido
 func (as ArticleStatus) IsValid() bool {
 	return as == ArticleStatusGenerating ||
+		as == ArticleStatusGenerated ||
 		as == ArticleStatusPublishing ||
 		as == ArticleStatusPublished ||
 		as == ArticleStatusError
@@ -308,6 +310,13 @@ func (a *Article) Validate() error {
 // SetGenerating marca artigo como em geração
 func (a *Article) SetGenerating() {
 	a.Status = ArticleStatusGenerating
+	a.ErrorMessage = nil
+	a.UpdatedAt = time.Now()
+}
+
+// SetGenerated marca artigo como gerado (pendente de aprovação)
+func (a *Article) SetGenerated() {
+	a.Status = ArticleStatusGenerated
 	a.ErrorMessage = nil
 	a.UpdatedAt = time.Now()
 }

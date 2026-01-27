@@ -242,6 +242,13 @@ func main() {
 		queueService,
 	)
 
+	// New PublishArticleUseCase (manual publication)
+	publishArticleUC := article.NewPublishArticleUseCase(
+		repositories.Article,
+		repositories.Integration,
+		cryptoService,
+	)
+
 	getPublishStatusUC := wizard.NewGetPublishStatusUseCase(
 		repositories.User,
 		repositories.ArticleJob,
@@ -331,6 +338,7 @@ func main() {
 		listArticlesUC,
 		getArticleUC,
 		republishArticleUC,
+		publishArticleUC,
 	)
 
 	log.Info().Msg("ArticleHandler inicializado")
@@ -620,6 +628,9 @@ func setupRouter(
 				r.Get("/", articleHandler.ListArticles)
 				r.Get("/{id}", articleHandler.GetArticle)
 				r.Post("/{id}/republish", articleHandler.RepublishArticle)
+				
+				// New endpoint: Manual Publish
+				r.Post("/{id}/publish", articleHandler.PublishArticle)
 			})
 
 			// Account routes (protegidas) - spec 4.7

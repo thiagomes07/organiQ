@@ -317,7 +317,7 @@ export function OnboardingWizard() {
                 onClick={handlePublish}
                 className="bg-[var(--color-primary-purple)] hover:bg-[var(--color-primary-purple)]/90"
               >
-                Confirmar Publicação
+                Confirmar e Gerar Matérias
               </Button>
             </DialogFooter>
           </DialogContent>

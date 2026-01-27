@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ArticlePreviewModal } from "@/components/articles/ArticlePreviewModal";
 import { Textarea } from "@/components/ui/textarea";
 import { copyToClipboard } from "@/lib/utils";
 import { toast } from "sonner";
@@ -38,6 +39,7 @@ export default function MateriasPage() {
   );
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedError, setSelectedError] = useState<Article | null>(null);
+  const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
 
   const {
     articles,
@@ -47,7 +49,9 @@ export default function MateriasPage() {
     isLoading,
     isEmpty,
     republishArticle,
+    publishArticle,
     isRepublishing,
+    isPublishing,
     hasActiveArticles,
   } = useArticles({
     status: statusFilter,
@@ -73,6 +77,19 @@ export default function MateriasPage() {
     setSelectedError(null);
   };
 
+  const handlePreview = (article: Article) => {
+    setPreviewArticle(article);
+  };
+
+  const handlePublish = async (id: string) => {
+    await publishArticle(id);
+    // Modal will close automatically or we can close it here if publishArticle throws we handle it in modal
+    // But modal closes on success usually or we wait for query invalidation.
+    // Actually publishArticle is async so we await it.
+    // If successful, we can clear preview.
+    setPreviewArticle(null);
+  }
+
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
@@ -93,7 +110,7 @@ export default function MateriasPage() {
           <h1 className="text-3xl font-bold font-all-round text-[var(--color-primary-dark)]">
             Minhas Matérias
           </h1>
-          <p className="text-sm font-onest text-[var(--color-primary-dark)]/70 mt-1">
+          <p className="text-sm font-onest text-[var(--color-primary-dark)]/70">
             {total} {total === 1 ? "matéria" : "matérias"} no total
           </p>
         </div>
@@ -118,6 +135,7 @@ export default function MateriasPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="generated">Geradas (Pendentes)</SelectItem>
                 <SelectItem value="published">Publicadas</SelectItem>
                 <SelectItem value="generating">Gerando</SelectItem>
                 <SelectItem value="publishing">Publicando</SelectItem>
@@ -156,6 +174,7 @@ export default function MateriasPage() {
               articles={articles}
               onViewError={setSelectedError}
               onRepublish={republishArticle}
+              onPreview={handlePreview}
               isRepublishing={isRepublishing}
             />
           </div>
@@ -168,6 +187,7 @@ export default function MateriasPage() {
                 article={article}
                 onViewError={setSelectedError}
                 onRepublish={republishArticle}
+                onPreview={handlePreview}
                 isRepublishing={isRepublishing}
               />
             ))}
@@ -293,6 +313,15 @@ export default function MateriasPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Preview Modal */}
+      <ArticlePreviewModal
+        article={previewArticle}
+        isOpen={!!previewArticle}
+        onClose={() => setPreviewArticle(null)}
+        onPublish={handlePublish}
+        isPublishing={isPublishing}
+      />
     </div>
   );
 }

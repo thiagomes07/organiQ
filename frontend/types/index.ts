@@ -109,7 +109,7 @@ export interface ArticleIdea {
   feedback?: string;
 }
 
-export type ArticleStatus = "generating" | "publishing" | "published" | "error";
+export type ArticleStatus = "generating" | "generated" | "publishing" | "published" | "error";
 
 export interface Article {
   id: string;
@@ -132,6 +132,8 @@ export interface ArticleFilters {
   page?: number;
   limit?: number;
   status?: ArticleStatus | "all";
+  sortBy?: string;
+  order?: "asc" | "desc";
 }
 
 export interface PublishPayload {

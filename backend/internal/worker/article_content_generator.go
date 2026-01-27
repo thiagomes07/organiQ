@@ -1,4 +1,4 @@
-// internal/worker/article_publisher.go
+// internal/worker/article_content_generator.go
 package worker
 
 import (
@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,16 +15,14 @@ import (
 	"organiq/internal/domain/repository"
 	"organiq/internal/infra/ai"
 	"organiq/internal/infra/queue"
-	"organiq/internal/infra/wordpress"
 	"organiq/internal/util"
 )
 
-// ArticlePublisherWorker consome mensagens da fila de publicação
-type ArticlePublisherWorker struct {
+// ArticleContentGeneratorWorker consome mensagens da fila e gera conteúdo de artigos
+type ArticleContentGeneratorWorker struct {
 	queueService     queue.QueueService
 	articleRepo      repository.ArticleRepository
 	businessRepo     repository.BusinessRepository
-	integrationRepo  repository.IntegrationRepository
 	agentClient      *ai.AgentClient
 	cryptoService    *util.CryptoService
 	pollInterval     time.Duration
@@ -33,22 +30,20 @@ type ArticlePublisherWorker struct {
 	workerID         string
 }
 
-// NewArticlePublisherWorker cria nova instância do worker
-func NewArticlePublisherWorker(
+// NewArticleContentGeneratorWorker cria nova instância do worker
+func NewArticleContentGeneratorWorker(
 	queueService queue.QueueService,
 	articleRepo repository.ArticleRepository,
 	businessRepo repository.BusinessRepository,
-	integrationRepo repository.IntegrationRepository,
 	agentClient *ai.AgentClient,
 	cryptoService *util.CryptoService,
 	pollInterval time.Duration,
 	maxRetries int,
-) *ArticlePublisherWorker {
-	return &ArticlePublisherWorker{
+) *ArticleContentGeneratorWorker {
+	return &ArticleContentGeneratorWorker{
 		queueService:    queueService,
 		articleRepo:     articleRepo,
 		businessRepo:    businessRepo,
-		integrationRepo: integrationRepo,
 		agentClient:     agentClient,
 		cryptoService:   cryptoService,
 		pollInterval:    pollInterval,
@@ -58,11 +53,11 @@ func NewArticlePublisherWorker(
 }
 
 // Start inicia o worker em goroutine
-func (w *ArticlePublisherWorker) Start(ctx context.Context) error {
+func (w *ArticleContentGeneratorWorker) Start(ctx context.Context) error {
 	log.Info().
 		Str("worker_id", w.workerID).
 		Dur("poll_interval", w.pollInterval).
-		Msg("ArticlePublisherWorker iniciando")
+		Msg("ArticleContentGeneratorWorker iniciando")
 
 	ticker := time.NewTicker(w.pollInterval)
 	defer ticker.Stop()
@@ -70,7 +65,7 @@ func (w *ArticlePublisherWorker) Start(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info().Str("worker_id", w.workerID).Msg("ArticlePublisherWorker parando gracefully")
+			log.Info().Str("worker_id", w.workerID).Msg("ArticleContentGeneratorWorker parando gracefully")
 			return ctx.Err()
 
 		case <-ticker.C:
@@ -80,30 +75,30 @@ func (w *ArticlePublisherWorker) Start(ctx context.Context) error {
 }
 
 // processBatch consome e processa batch de mensagens
-func (w *ArticlePublisherWorker) processBatch(ctx context.Context) {
+func (w *ArticleContentGeneratorWorker) processBatch(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	log.Debug().Str("worker_id", w.workerID).Msg("ArticlePublisherWorker: iniciando processBatch")
+	log.Debug().Str("worker_id", w.workerID).Msg("ArticleContentGeneratorWorker: iniciando processBatch")
 
 	messages, err := w.queueService.ReceiveMessages(ctx, "article-publish-queue", 10)
 	if err != nil {
 		log.Error().
 			Err(err).
 			Str("worker_id", w.workerID).
-			Msg("ArticlePublisherWorker: erro ao receber mensagens")
+			Msg("ArticleContentGeneratorWorker: erro ao receber mensagens")
 		return
 	}
 
 	if len(messages) == 0 {
-		log.Debug().Str("worker_id", w.workerID).Msg("ArticlePublisherWorker: nenhuma mensagem disponível")
+		log.Debug().Str("worker_id", w.workerID).Msg("ArticleContentGeneratorWorker: nenhuma mensagem disponível")
 		return
 	}
 
 	log.Info().
 		Str("worker_id", w.workerID).
 		Int("message_count", len(messages)).
-		Msg("ArticlePublisherWorker: processando batch")
+		Msg("ArticleContentGeneratorWorker: processando batch")
 
 	for _, msg := range messages {
 		w.processMessage(ctx, msg)
@@ -111,11 +106,11 @@ func (w *ArticlePublisherWorker) processBatch(ctx context.Context) {
 }
 
 // processMessage processa uma mensagem individual
-func (w *ArticlePublisherWorker) processMessage(ctx context.Context, message *queue.Message) {
+func (w *ArticleContentGeneratorWorker) processMessage(ctx context.Context, message *queue.Message) {
 	log.Debug().
 		Str("worker_id", w.workerID).
 		Str("message_id", message.ID).
-		Msg("ArticlePublisherWorker: processando mensagem")
+		Msg("ArticleContentGeneratorWorker: processando mensagem")
 
 	var payload map[string]interface{}
 	if err := json.Unmarshal(message.Body, &payload); err != nil {
@@ -123,7 +118,7 @@ func (w *ArticlePublisherWorker) processMessage(ctx context.Context, message *qu
 			Err(err).
 			Str("worker_id", w.workerID).
 			Str("message_id", message.ID).
-			Msg("ArticlePublisherWorker: erro ao fazer parse da mensagem")
+			Msg("ArticleContentGeneratorWorker: erro ao fazer parse da mensagem")
 		_ = w.queueService.DeleteMessage(ctx, "article-publish-queue", message.ReceiptHandle)
 		return
 	}
@@ -132,7 +127,7 @@ func (w *ArticlePublisherWorker) processMessage(ctx context.Context, message *qu
 	if !ok {
 		log.Error().
 			Str("worker_id", w.workerID).
-			Msg("ArticlePublisherWorker: articleId não encontrado")
+			Msg("ArticleContentGeneratorWorker: articleId não encontrado")
 		_ = w.queueService.DeleteMessage(ctx, "article-publish-queue", message.ReceiptHandle)
 		return
 	}
@@ -143,7 +138,7 @@ func (w *ArticlePublisherWorker) processMessage(ctx context.Context, message *qu
 			Err(err).
 			Str("worker_id", w.workerID).
 			Str("article_id", articleIDStr).
-			Msg("ArticlePublisherWorker: articleId inválido")
+			Msg("ArticleContentGeneratorWorker: articleId inválido")
 		_ = w.queueService.DeleteMessage(ctx, "article-publish-queue", message.ReceiptHandle)
 		return
 	}
@@ -153,7 +148,7 @@ func (w *ArticlePublisherWorker) processMessage(ctx context.Context, message *qu
 		log.Error().
 			Err(err).
 			Str("article_id", articleIDStr).
-			Msg("ArticlePublisherWorker: erro ao buscar artigo")
+			Msg("ArticleContentGeneratorWorker: erro ao buscar artigo")
 
 		if message.ReceivedCount < 3 {
 			return // Retry automático
@@ -174,7 +169,7 @@ func (w *ArticlePublisherWorker) processMessage(ctx context.Context, message *qu
 			Str("worker_id", w.workerID).
 			Str("article_id", articleIDStr).
 			Int("attempt", attempt+1).
-			Msg("ArticlePublisherWorker: tentativa de processamento")
+			Msg("ArticleContentGeneratorWorker: tentativa de processamento")
 
 		_ = w.queueService.ChangeMessageVisibility(
 			ctx,
@@ -183,7 +178,7 @@ func (w *ArticlePublisherWorker) processMessage(ctx context.Context, message *qu
 			60*(attempt+1),
 		)
 
-		err := w.publishArticle(ctx, article, payload)
+		err := w.generateContent(ctx, article, payload)
 		if err == nil {
 			success = true
 			break
@@ -194,14 +189,14 @@ func (w *ArticlePublisherWorker) processMessage(ctx context.Context, message *qu
 			Err(err).
 			Str("article_id", articleIDStr).
 			Int("attempt", attempt+1).
-			Msg("ArticlePublisherWorker: erro na tentativa")
+			Msg("ArticleContentGeneratorWorker: erro na tentativa")
 
 		if attempt < w.maxRetries-1 {
 			backoffDuration := time.Duration((1 << uint(attempt)) * 5) * time.Second
 			log.Debug().
 				Str("worker_id", w.workerID).
 				Dur("backoff", backoffDuration).
-				Msg("ArticlePublisherWorker: aguardando antes de retry")
+				Msg("ArticleContentGeneratorWorker: aguardando antes de retry")
 
 			select {
 			case <-ctx.Done():
@@ -215,14 +210,14 @@ func (w *ArticlePublisherWorker) processMessage(ctx context.Context, message *qu
 		log.Info().
 			Str("worker_id", w.workerID).
 			Str("article_id", articleIDStr).
-			Msg("ArticlePublisherWorker: artigo publicado com sucesso")
+			Msg("ArticleContentGeneratorWorker: artigo gerado com sucesso")
 	} else {
 		log.Error().
 			Err(lastErr).
 			Str("article_id", articleIDStr).
-			Msg("ArticlePublisherWorker: falha ao publicar após retries")
+			Msg("ArticleContentGeneratorWorker: falha ao gerar após retries")
 
-		errorMsg := "erro ao publicar artigo"
+		errorMsg := "erro ao gerar artigo"
 		if lastErr != nil {
 			errorMsg = lastErr.Error()
 		}
@@ -233,19 +228,19 @@ func (w *ArticlePublisherWorker) processMessage(ctx context.Context, message *qu
 		log.Error().
 			Err(err).
 			Str("message_id", message.ID).
-			Msg("ArticlePublisherWorker: erro ao deletar mensagem")
+			Msg("ArticleContentGeneratorWorker: erro ao deletar mensagem")
 	}
 }
 
-// publishArticle executa a lógica de publicação
-func (w *ArticlePublisherWorker) publishArticle(
+// generateContent executa a lógica de geração
+func (w *ArticleContentGeneratorWorker) generateContent(
 	ctx context.Context,
 	article *entity.Article,
 	payload map[string]interface{},
 ) error {
 	log.Debug().
 		Str("article_id", article.ID.String()).
-		Msg("ArticlePublisherWorker: iniciando publishArticle")
+		Msg("ArticleContentGeneratorWorker: iniciando generateContent")
 
 	// 1. Verificar se já tem conteúdo (retry)
 	isRetry := payload["isRetry"] != nil && payload["isRetry"].(bool)
@@ -337,93 +332,17 @@ func (w *ArticlePublisherWorker) publishArticle(
 			Msg("Conteúdo gerado e salvo")
 	}
 
-	// 7. Atualizar status para publishing
-	if err := w.articleRepo.UpdateStatus(ctx, article.ID, entity.ArticleStatusPublishing); err != nil {
-		return fmt.Errorf("erro ao atualizar status: %w", err)
-	}
+	// 7. Marcar artigo como GERADO (e não publicado)
+	article.SetGenerated()
 
-	// 8. Buscar integração WordPress
-	wpIntegration, err := w.integrationRepo.FindEnabledByUserIDAndType(
-		ctx,
-		article.UserID,
-		entity.IntegrationTypeWordPress,
-	)
-
-	if err != nil {
-		return fmt.Errorf("erro ao buscar integração WordPress: %w", err)
-	}
-
-	if wpIntegration == nil {
-		return errors.New("integração WordPress não configurada")
-	}
-
-	// 9. Extrair credenciais WordPress
-	wpConfig, err := wpIntegration.GetWordPressConfig()
-	if err != nil {
-		return fmt.Errorf("erro ao extrair config WordPress: %w", err)
-	}
-
-	// Descriptografar appPassword
-	decryptedPassword, err := w.cryptoService.DecryptAES(wpConfig.AppPassword)
-	if err != nil {
-		return fmt.Errorf("erro ao descriptografar senha: %w", err)
-	}
-
-	// 10. Converter Markdown para HTML (simplificado)
-	htmlContent := markdownToHTML(content)
-
-	// 11. Publicar no WordPress
-	log.Debug().
-		Str("article_id", article.ID.String()).
-		Str("wp_site", wpConfig.SiteURL).
-		Msg("Publicando no WordPress")
-
-	wpClient := wordpress.NewClient(wpConfig.SiteURL, wpConfig.Username, decryptedPassword)
-
-	wpPost := &wordpress.Post{
-		Title:   article.Title,
-		Content: htmlContent,
-		Status:  "publish",
-	}
-
-	if err := wpPost.Validate(); err != nil {
-		return fmt.Errorf("post WordPress inválido: %w", err)
-	}
-
-	wpResponse, err := wpClient.CreatePost(ctx, wpPost)
-	if err != nil {
-		return fmt.Errorf("erro ao publicar no WordPress: %w", err)
-	}
-
-	// 12. Salvar URL do post e marcar como publicado
-	if err := w.articleRepo.SetPublished(ctx, article.ID, wpResponse.Link); err != nil {
-		return fmt.Errorf("erro ao marcar como publicado: %w", err)
+	// Usando UpdateStatus do repo
+	if err := w.articleRepo.UpdateStatus(ctx, article.ID, entity.ArticleStatusGenerated); err != nil {
+		return fmt.Errorf("erro ao atualizar status para generated: %w", err)
 	}
 
 	log.Info().
 		Str("article_id", article.ID.String()).
-		Str("post_url", wpResponse.Link).
-		Msg("Artigo publicado com sucesso")
+		Msg("Artigo gerado e pronto para aprovação")
 
 	return nil
-}
-
-// markdownToHTML converte Markdown para HTML (simplificado)
-func markdownToHTML(markdown string) string {
-	html := markdown
-
-	// Headers
-	html = strings.ReplaceAll(html, "### ", "<h3>")
-	html = strings.ReplaceAll(html, "## ", "<h2>")
-	html = strings.ReplaceAll(html, "# ", "<h1>")
-
-	// Bold/Italic
-	html = strings.ReplaceAll(html, "**", "<strong>")
-	html = strings.ReplaceAll(html, "*", "<em>")
-
-	// Quebras de linha
-	html = strings.ReplaceAll(html, "\n\n", "</p><p>")
-	html = "<p>" + html + "</p>"
-
-	return html
 }

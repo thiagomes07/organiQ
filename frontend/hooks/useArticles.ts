@@ -39,6 +39,10 @@ const articlesApi = {
   deleteArticle: async (id: string): Promise<void> => {
     await api.delete(`/articles/${id}`);
   },
+
+  publishArticle: async (id: string): Promise<void> => {
+    await api.post(`/articles/${id}/publish`);
+  },
 };
 
 // ============================================
@@ -93,6 +97,22 @@ export function useArticles(filters: ArticleFilters = {}) {
     onError: (error) => {
       const message = getErrorMessage(error);
       toast.error(message || "Erro ao republicar matéria");
+    },
+  });
+
+  // ============================================
+  // PUBLISH MUTATION (Manual)
+  // ============================================
+
+  const publishMutation = useMutation({
+    mutationFn: articlesApi.publishArticle,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: articleKeys.lists() });
+      toast.success("Publicação iniciada com sucesso!");
+    },
+    onError: (error) => {
+      const message = getErrorMessage(error);
+      toast.error(message || "Erro ao publicar matéria");
     },
   });
 
@@ -177,11 +197,13 @@ export function useArticles(filters: ArticleFilters = {}) {
 
     // Actions
     republishArticle,
+    publishArticle: (id: string) => publishMutation.mutateAsync(id), // Expose generic publish
     deleteArticle,
     refetch: articlesQuery.refetch,
 
     // Mutation states
     isRepublishing: republishMutation.isPending,
+    isPublishing: publishMutation.isPending,
     isDeleting: deleteMutation.isPending,
 
     // Helpers

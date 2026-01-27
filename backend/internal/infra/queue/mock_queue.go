@@ -238,19 +238,9 @@ func (q *MockQueue) processPublishArticles(payload map[string]interface{}) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	// 1. Atualizar status para "processing"
-	if err := q.articleJobRepo.UpdateStatus(ctx, jobID, entity.JobStatusProcessing, 10); err != nil {
-		log.Error().Err(err).Msg("MockQueue: erro ao atualizar status de publicação")
-		return
-	}
-
-	// 2. Simular delay de geração
-	time.Sleep(q.processingDelay / 3)
-	_ = q.articleJobRepo.UpdateStatus(ctx, jobID, entity.JobStatusProcessing, 30)
-
 	// 3. Buscar artigos do usuário com status "generating"
 	if q.articleRepo != nil {
-		articles, err := q.articleRepo.FindByUserIDAndStatus(ctx, userID, entity.ArticleStatusGenerating, 100, 0)
+		articles, err := q.articleRepo.FindByUserIDAndStatus(ctx, userID, entity.ArticleStatusGenerating, 100, 0, "", "")
 		if err != nil {
 			log.Error().Err(err).Msg("MockQueue: erro ao buscar artigos para publicação")
 		} else {

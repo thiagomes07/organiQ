@@ -558,12 +558,14 @@ func (r *ArticleRepositoryPostgres) FindByID(ctx context.Context, id uuid.UUID) 
 }
 
 // FindByUserID implementa repository.FindByUserID
-func (r *ArticleRepositoryPostgres) FindByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*entity.Article, error) {
+func (r *ArticleRepositoryPostgres) FindByUserID(ctx context.Context, userID uuid.UUID, limit, offset int, sortBy, order string) ([]*entity.Article, error) {
 	var articles []*entity.Article
+
+	sortOrder := getSortOrder(sortBy, order)
 
 	err := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).
-		Order("created_at DESC").
+		Order(sortOrder).
 		Limit(limit).
 		Offset(offset).
 		Find(&articles).
@@ -578,12 +580,14 @@ func (r *ArticleRepositoryPostgres) FindByUserID(ctx context.Context, userID uui
 }
 
 // FindByUserIDAndStatus implementa repository.FindByUserIDAndStatus
-func (r *ArticleRepositoryPostgres) FindByUserIDAndStatus(ctx context.Context, userID uuid.UUID, status entity.ArticleStatus, limit, offset int) ([]*entity.Article, error) {
+func (r *ArticleRepositoryPostgres) FindByUserIDAndStatus(ctx context.Context, userID uuid.UUID, status entity.ArticleStatus, limit, offset int, sortBy, order string) ([]*entity.Article, error) {
 	var articles []*entity.Article
+
+	sortOrder := getSortOrder(sortBy, order)
 
 	err := r.db.WithContext(ctx).
 		Where("user_id = ? AND status = ?", userID, status).
-		Order("created_at DESC").
+		Order(sortOrder).
 		Limit(limit).
 		Offset(offset).
 		Find(&articles).
@@ -616,12 +620,14 @@ func (r *ArticleRepositoryPostgres) FindByIdeaID(ctx context.Context, ideaID uui
 }
 
 // FindPublishedByUserID implementa repository.FindPublishedByUserID
-func (r *ArticleRepositoryPostgres) FindPublishedByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*entity.Article, error) {
+func (r *ArticleRepositoryPostgres) FindPublishedByUserID(ctx context.Context, userID uuid.UUID, limit, offset int, sortBy, order string) ([]*entity.Article, error) {
 	var articles []*entity.Article
+
+	sortOrder := getSortOrder(sortBy, order)
 
 	err := r.db.WithContext(ctx).
 		Where("user_id = ? AND status = ?", userID, entity.ArticleStatusPublished).
-		Order("created_at DESC").
+		Order(sortOrder).
 		Limit(limit).
 		Offset(offset).
 		Find(&articles).
@@ -636,12 +642,14 @@ func (r *ArticleRepositoryPostgres) FindPublishedByUserID(ctx context.Context, u
 }
 
 // FindErrorsByUserID implementa repository.FindErrorsByUserID
-func (r *ArticleRepositoryPostgres) FindErrorsByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*entity.Article, error) {
+func (r *ArticleRepositoryPostgres) FindErrorsByUserID(ctx context.Context, userID uuid.UUID, limit, offset int, sortBy, order string) ([]*entity.Article, error) {
 	var articles []*entity.Article
+
+	sortOrder := getSortOrder(sortBy, order)
 
 	err := r.db.WithContext(ctx).
 		Where("user_id = ? AND status = ?", userID, entity.ArticleStatusError).
-		Order("created_at DESC").
+		Order(sortOrder).
 		Limit(limit).
 		Offset(offset).
 		Find(&articles).
@@ -653,6 +661,23 @@ func (r *ArticleRepositoryPostgres) FindErrorsByUserID(ctx context.Context, user
 	}
 
 	return articles, nil
+}
+
+func getSortOrder(sortBy, order string) string {
+	if order != "asc" && order != "desc" {
+		order = "desc"
+	}
+
+	switch sortBy {
+	case "title":
+		return "title " + order
+	case "status":
+		return "status " + order
+	case "created_at":
+		return "created_at " + order
+	default:
+		return "created_at " + order
+	}
 }
 
 // FindByStatus implementa repository.FindByStatus
